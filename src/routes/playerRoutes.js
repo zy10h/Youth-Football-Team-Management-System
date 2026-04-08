@@ -1,6 +1,5 @@
 const express = require('express');
 const { body } = require('express-validator');
-
 const {
   getAllPlayers,
   getPlayerById,
@@ -17,19 +16,27 @@ const router = express.Router();
 router.get('/', getAllPlayers);
 router.get('/:id', getPlayerById);
 
+const jerseyValidation = body('jerseyNumber')
+  .optional()
+  .isInt({ min: 1, max: 99 })
+  .withMessage('Jersey number must be between 1 and 99');
+
 router.post(
   '/',
   authMiddleware,
-  [
-    body('firstName').trim().notEmpty().withMessage('First name is required'),
-    body('lastName').trim().notEmpty().withMessage('Last name is required'),
-    body('dateOfBirth').notEmpty().withMessage('Date of birth is required')
-  ],
+  [jerseyValidation],
   validateMiddleware,
   createPlayer
 );
 
-router.put('/:id', authMiddleware, updatePlayer);
+router.put(
+  '/:id',
+  authMiddleware,
+  [jerseyValidation],
+  validateMiddleware,
+  updatePlayer
+);
+
 router.delete('/:id', authMiddleware, deletePlayer);
 
 module.exports = router;

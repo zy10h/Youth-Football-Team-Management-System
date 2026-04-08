@@ -1,9 +1,24 @@
 const Team = require('../models/Team');
+const Player = require('../models/Player');
 
 async function getAllTeams(req, res, next) {
   try {
-    const teams = await Team.find().populate('coach');
-    res.status(200).json(teams);
+    const teams = await Team.find().populate('coach').sort({ maxAge: 1 });
+
+    const result = await Promise.all(
+      teams.map(async (team) => {
+        const players = await Player.find({ team: team._id })
+          .select('firstName lastName jerseyNumber')
+          .sort({ jerseyNumber: 1 });
+
+        return {
+          ...team.toObject(),
+          players
+        };
+      })
+    );
+
+    res.status(200).json(result);
   } catch (error) {
     next(error);
   }
@@ -17,7 +32,14 @@ async function getTeamById(req, res, next) {
       return res.status(404).json({ message: 'Team not found' });
     }
 
-    res.status(200).json(team);
+    const players = await Player.find({ team: team._id })
+      .select('firstName lastName jerseyNumber age preferredPosition alternativePositions')
+      .sort({ jerseyNumber: 1, lastName: 1 });
+
+    res.status(200).json({
+      ...team.toObject(),
+      players
+    });
   } catch (error) {
     next(error);
   }
@@ -25,19 +47,73 @@ async function getTeamById(req, res, next) {
 
 async function createTeam(req, res, next) {
   try {
-    const team = await Team.create(req.body);
-    res.status(201).json(team);
+    const { maxAge } = req.body;
+
+    if (!maxAge) {
+      return res.status(400).json({ message: 'Maximum age is required' });
+    }
+
+    const numericMaxAge = Number(maxAge);
+
+    const existingTeam = await Team.findOne({ maxAge: numericMaxAge });
+
+    if (existingTeam) {
+      return res.status(409).json({
+        message: `A team with maximum age ${numericMaxAge} already exists`
+      });
+    }
+
+    const teamData = {
+      ...req.body,
+      name: `U${numericMaxAge}`,
+      maxAge: numericMaxAge
+    };
+
+    const team = await Team.create(teamData);
+    const populatedTeam = await Team.findById(team._id).populate('coach');
+
+    res.status(201).json(populatedTeam);
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: 'A team with this maximum age already exists'
+      });
+    }
     next(error);
   }
 }
 
 async function updateTeam(req, res, next) {
   try {
-    const team = await Team.findByIdAndUpdate(req.params.id, req.body, {
+    const { maxAge } = req.body;
+
+    if (maxAge === undefined || maxAge === null || maxAge === '') {
+      return res.status(400).json({ message: 'Maximum age is required' });
+    }
+
+    const numericMaxAge = Number(maxAge);
+
+    const existingTeam = await Team.findOne({
+      maxAge: numericMaxAge,
+      _id: { $ne: req.params.id }
+    });
+
+    if (existingTeam) {
+      return res.status(409).json({
+        message: `A team with maximum age ${numericMaxAge} already exists`
+      });
+    }
+
+    const updatedData = {
+      ...req.body,
+      name: `U${numericMaxAge}`,
+      maxAge: numericMaxAge
+    };
+
+    const team = await Team.findByIdAndUpdate(req.params.id, updatedData, {
       new: true,
       runValidators: true
-    });
+    }).populate('coach');
 
     if (!team) {
       return res.status(404).json({ message: 'Team not found' });
@@ -45,6 +121,11 @@ async function updateTeam(req, res, next) {
 
     res.status(200).json(team);
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: 'A team with this maximum age already exists'
+      });
+    }
     next(error);
   }
 }

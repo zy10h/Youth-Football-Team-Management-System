@@ -16,34 +16,25 @@ const playerSchema = new mongoose.Schema(
       type: Date,
       required: true
     },
-    age: {
-      type: Number,
-      required: true
+    preferredPosition: {
+      type: String
     },
-    preferredPositions: [
+    alternativePositions: [
       {
-        type: String,
-        enum: ['Goalkeeper', 'Defender', 'Midfielder', 'Winger', 'Striker']
+        type: String
       }
     ],
     jerseyNumber: {
-      type: Number
+      type: Number,
+      min: 1,
+      max: 99
     },
+    guardianName: String,
+    guardianPhone: String,
+    email: String,
     team: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Team'
-    },
-    guardianName: {
-      type: String,
-      trim: true
-    },
-    guardianPhone: {
-      type: String,
-      trim: true
-    },
-    email: {
-      type: String,
-      trim: true
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,

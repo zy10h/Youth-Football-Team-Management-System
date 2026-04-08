@@ -5,29 +5,32 @@ const teamSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
+      unique: true,
       trim: true
-    },
-    ageGroup: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    minAge: {
-      type: Number,
-      required: true
     },
     maxAge: {
       type: Number,
-      required: true
+      required: true,
+      unique: true
     },
     coach: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Coach'
     },
-    trainingDay: {
-      type: String,
-      trim: true
-    }
+    trainingDays: [
+      {
+        type: String,
+        enum: [
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+          'Saturday',
+          'Sunday'
+        ]
+      }
+    ]
   },
   {
     timestamps: true
