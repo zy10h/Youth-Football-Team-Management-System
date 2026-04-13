@@ -8,7 +8,7 @@ export default function LinkText({ to, children }) {
       to={to}
       style={{
         textDecoration: "none",
-        color: "#1971c2", // Mantine 默认蓝
+        color: "#1971c2",
         fontWeight: 500,
       }}
       onMouseEnter={(e) => (e.target.style.textDecoration = "underline")}

@@ -1,6 +1,35 @@
 const Team = require('../models/Team');
 const Player = require('../models/Player');
 
+async function checkCoachScheduleConflict({ coachId, trainingDays, currentTeamId = null }) {
+  if (!coachId || !trainingDays || trainingDays.length === 0) {
+    return null;
+  }
+
+  const query = { coach: coachId };
+
+  if (currentTeamId) {
+    query._id = { $ne: currentTeamId };
+  }
+
+  const existingTeams = await Team.find(query);
+
+  for (const team of existingTeams) {
+    const overlappingDays = (team.trainingDays || []).filter((day) =>
+      trainingDays.includes(day)
+    );
+
+    if (overlappingDays.length > 0) {
+      return {
+        teamName: team.name,
+        overlappingDays
+      };
+    }
+  }
+
+  return null;
+}
+
 async function getAllTeams(req, res, next) {
   try {
     const teams = await Team.find().populate('coach').sort({ maxAge: 1 });
@@ -63,6 +92,17 @@ async function createTeam(req, res, next) {
       });
     }
 
+    const conflict = await checkCoachScheduleConflict({
+      coachId: req.body.coach,
+      trainingDays: req.body.trainingDays
+    });
+
+    if (conflict) {
+      return res.status(400).json({
+        message: `Coach is already assigned to ${conflict.teamName} on ${conflict.overlappingDays.join(', ')}.`
+      });
+    }
+
     const teamData = {
       ...req.body,
       name: `U${numericMaxAge}`,
@@ -101,6 +141,18 @@ async function updateTeam(req, res, next) {
     if (existingTeam) {
       return res.status(409).json({
         message: `A team with maximum age ${numericMaxAge} already exists`
+      });
+    }
+
+    const conflict = await checkCoachScheduleConflict({
+      coachId: req.body.coach,
+      trainingDays: req.body.trainingDays,
+      currentTeamId: req.params.id
+    });
+
+    if (conflict) {
+      return res.status(400).json({
+        message: `Coach is already assigned to ${conflict.teamName} on ${conflict.overlappingDays.join(', ')}.`
       });
     }
 
@@ -144,10 +196,25 @@ async function deleteTeam(req, res, next) {
   }
 }
 
+async function getTeamsByCoach(req, res, next) {
+  try {
+    const { coachId } = req.params;
+
+    const teams = await Team.find({ coach: coachId })
+      .select("name trainingDays")
+      .sort({ maxAge: 1 });
+
+    res.status(200).json(teams);
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   getAllTeams,
   getTeamById,
   createTeam,
   updateTeam,
-  deleteTeam
+  deleteTeam,
+  getTeamsByCoach 
 };

@@ -6,7 +6,8 @@ const {
   getTeamById,
   createTeam,
   updateTeam,
-  deleteTeam
+  deleteTeam,
+  getTeamsByCoach
 } = require('../controllers/teamController');
 
 const authMiddleware = require('../middleware/authMiddleware');
@@ -49,6 +50,7 @@ const teamValidation = [
 
 router.get('/', getAllTeams);
 router.get('/:id', getTeamById);
+router.get("/coach/:coachId", getTeamsByCoach);
 
 router.post(
   '/',

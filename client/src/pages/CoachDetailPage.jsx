@@ -8,7 +8,7 @@ import {
   Stack,
   Group,
   Button,
-  Divider,
+  Badge,
 } from "@mantine/core";
 import api from "../api/api";
 import LoadingState from "../components/LoadingState";
@@ -19,21 +19,27 @@ export default function CoachDetailPage() {
   const navigate = useNavigate();
 
   const [coach, setCoach] = useState(null);
+  const [teams, setTeams] = useState([]);
   const [error, setError] = useState("");
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    async function fetchCoach() {
+    async function fetchData() {
       try {
-        const res = await api.get(`/coaches/${id}`);
-        setCoach(res.data);
+        const [coachRes, teamsRes] = await Promise.all([
+          api.get(`/coaches/${id}`),
+          api.get(`/teams/coach/${id}`),
+        ]);
+
+        setCoach(coachRes.data);
+        setTeams(teamsRes.data || []);
         setError("");
       } catch (err) {
         setError(err.response?.data?.message || "Failed to load coach");
       }
     }
 
-    fetchCoach();
+    fetchData();
   }, [id]);
 
   const handleDelete = async () => {
@@ -66,9 +72,14 @@ export default function CoachDetailPage() {
   return (
     <Container>
       <Group justify="space-between" mb="md">
-        <Title order={2}>
-          {coach.firstName} {coach.lastName}
-        </Title>
+        <div>
+          <Title order={2}>
+            {coach.firstName} {coach.lastName}
+          </Title>
+          <Text c="dimmed" size="sm">
+            Coach Details
+          </Text>
+        </div>
 
         <Group>
           <Button
@@ -89,25 +100,36 @@ export default function CoachDetailPage() {
         </Group>
       </Group>
 
-      <Paper withBorder p="lg">
-        <Stack gap="sm">
-          <Divider label="Basic Info" labelPosition="left" />
+      <Paper withBorder shadow="sm" p="lg" radius="md">
+        <Stack gap="lg">
+          <div>
+            <Title order={3} mb="sm">
+              Basic Info
+            </Title>
+            <Text>Email: {coach.email || "N/A"}</Text>
+            <Text>Phone: {coach.phone || "N/A"}</Text>
+          </div>
 
-          <Text>
-            <strong>First Name:</strong> {coach.firstName || "N/A"}
-          </Text>
-          <Text>
-            <strong>Last Name:</strong> {coach.lastName || "N/A"}
-          </Text>
+          <div>
+            <Title order={3} mb="sm">
+              Assigned Teams
+            </Title>
 
-          <Divider label="Contact Info" labelPosition="left" />
-
-          <Text>
-            <strong>Email:</strong> {coach.email || "N/A"}
-          </Text>
-          <Text>
-            <strong>Phone:</strong> {coach.phone || "N/A"}
-          </Text>
+            {teams.length === 0 ? (
+              <Text c="dimmed">This coach is not assigned to any team.</Text>
+            ) : (
+              <Stack gap="xs">
+                {teams.map((team) => (
+                  <Group key={team._id} gap="xs">
+                    <Badge color="blue">{team.name}</Badge>
+                    <Text size="sm">
+                      ({team.trainingDays?.join(", ") || "No training days"})
+                    </Text>
+                  </Group>
+                ))}
+              </Stack>
+            )}
+          </div>
         </Stack>
       </Paper>
     </Container>

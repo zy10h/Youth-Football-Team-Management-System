@@ -114,14 +114,12 @@ export default function PlayersPage() {
 
     let list = [...players];
 
-    // Preferred Position：只匹配主位置
     if (preferredPositionFilter) {
       list = list.filter(
         (player) => player.preferredPosition === preferredPositionFilter
       );
     }
 
-    // Positions：主位置或备选位置都算
     if (positionFilter.length > 0) {
       list = list.filter((player) => {
         const preferred = player.preferredPosition || "";

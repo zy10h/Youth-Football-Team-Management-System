@@ -54,7 +54,9 @@ export default function RegisterPage() {
         password: form.password,
       });
 
-      navigate("/login");
+      navigate("/login", {
+        state: { message: "Registration successful! Please login." },
+      });
     } catch (err) {
       const responseData = err.response?.data;
 
