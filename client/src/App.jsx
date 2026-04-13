@@ -17,6 +17,7 @@ import CoachesPage from "./pages/CoachesPage";
 import CoachDetailPage from "./pages/CoachDetailPage";
 import CoachFormPage from "./pages/CoachFormPage";
 import CoachEditPage from "./pages/CoachEditPage";
+import RegisterPage from "./pages/RegisterPage";
 
 export default function App() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -137,6 +138,8 @@ export default function App() {
           <Route path="*" element={
             isAuthenticated ? <DashboardPage /> : <LoginPage />
           } />
+          
+          <Route path="/register" element={<RegisterPage />} />
         </Routes>
       </AppShell.Main>
     </AppShell>

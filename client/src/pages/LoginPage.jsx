@@ -10,9 +10,9 @@ import {
   Alert,
   Text
 } from "@mantine/core";
-import { useNavigate } from "react-router-dom";
 import api from "../api/api";
 import { useAuth } from "../context/AuthContext";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -72,6 +72,13 @@ export default function LoginPage() {
             <Button type="submit" fullWidth>
               Login
             </Button>
+
+            <Text ta="center" size="sm">
+              Don&apos;t have an account?{" "}
+              <Text component={Link} to="/register" span c="blue">
+                Register
+              </Text>
+            </Text>
           </Stack>
         </form>
       </Paper>

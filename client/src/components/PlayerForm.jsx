@@ -116,11 +116,21 @@ export default function PlayerForm({
     selectedTeam._id !== recommendedTeam._id;
 
   const handleChange = (field, value) => {
-    setForm((prev) => ({
-      ...prev,
-      [field]: value,
-      ...(field === "assignmentMode" && value === "auto" ? { team: "" } : {}),
-    }));
+    setForm((prev) => {
+      const updatedForm = {
+        ...prev,
+        [field]: value,
+        ...(field === "assignmentMode" && value === "auto" ? { team: "" } : {}),
+      };
+
+      if (field === "preferredPosition") {
+        updatedForm.alternativePositions = prev.alternativePositions.filter(
+          (position) => position !== value
+        );
+      }
+
+      return updatedForm;
+    });
   };
 
   const handleAlternativePositionChange = (position) => {

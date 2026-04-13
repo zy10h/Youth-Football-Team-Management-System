@@ -7,6 +7,7 @@ import {
   Button,
   Paper,
   TextInput,
+  Select,
   MultiSelect,
   Table,
   Badge,
@@ -40,6 +41,7 @@ export default function PlayersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [preferredPositionFilter, setPreferredPositionFilter] = useState("");
   const [positionFilter, setPositionFilter] = useState([]);
   const [minAge, setMinAge] = useState("");
   const [maxAge, setMaxAge] = useState("");
@@ -112,10 +114,24 @@ export default function PlayersPage() {
 
     let list = [...players];
 
-    if (positionFilter.length > 0) {
-      list = list.filter((player) =>
-        positionFilter.includes(player.preferredPosition)
+    // Preferred Position：只匹配主位置
+    if (preferredPositionFilter) {
+      list = list.filter(
+        (player) => player.preferredPosition === preferredPositionFilter
       );
+    }
+
+    // Positions：主位置或备选位置都算
+    if (positionFilter.length > 0) {
+      list = list.filter((player) => {
+        const preferred = player.preferredPosition || "";
+        const alternatives = player.alternativePositions || [];
+
+        return positionFilter.some(
+          (position) =>
+            preferred === position || alternatives.includes(position)
+        );
+      });
     }
 
     if (minAge !== "" && minAge !== null && minAge !== undefined) {
@@ -174,7 +190,14 @@ export default function PlayersPage() {
       default:
         return list;
     }
-  }, [players, sort, positionFilter, minAge, maxAge]);
+  }, [
+    players,
+    sort,
+    preferredPositionFilter,
+    positionFilter,
+    minAge,
+    maxAge,
+  ]);
 
   return (
     <Container>
@@ -205,8 +228,20 @@ export default function PlayersPage() {
             }}
           />
 
-          <MultiSelect
+          <Select
             label="Preferred Position"
+            placeholder="All preferred positions"
+            value={preferredPositionFilter}
+            onChange={(value) => {
+              setPreferredPositionFilter(value || "");
+              setPage(1);
+            }}
+            data={positionOptions}
+            clearable
+          />
+
+          <MultiSelect
+            label="Positions"
             placeholder="All positions"
             value={positionFilter}
             onChange={(value) => {
@@ -246,6 +281,7 @@ export default function PlayersPage() {
             variant="default"
             onClick={() => {
               setSearch("");
+              setPreferredPositionFilter("");
               setPositionFilter([]);
               setMinAge("");
               setMaxAge("");
