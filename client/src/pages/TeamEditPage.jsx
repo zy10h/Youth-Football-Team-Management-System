@@ -1,7 +1,10 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import api from '../api/api';
-import TeamForm from '../components/TeamForm';
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { Container, Title, Text } from "@mantine/core";
+import api from "../api/api";
+import TeamForm from "../components/TeamForm";
+import LoadingState from "../components/LoadingState";
+import ErrorAlert from "../components/ErrorAlert";
 
 export default function TeamEditPage() {
   const { id } = useParams();
@@ -9,21 +12,20 @@ export default function TeamEditPage() {
 
   const [team, setTeam] = useState(null);
   const [coaches, setCoaches] = useState([]);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [teamResponse, coachesResponse] = await Promise.all([
+        const [teamRes, coachRes] = await Promise.all([
           api.get(`/teams/${id}`),
-          api.get('/coaches')
+          api.get("/coaches"),
         ]);
 
-        setTeam(teamResponse.data);
-        setCoaches(coachesResponse.data || []);
-        setError('');
+        setTeam(teamRes.data);
+        setCoaches(coachRes.data || []);
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load team');
+        setError(err.response?.data?.message || "Failed to load team");
       }
     }
 
@@ -36,22 +38,31 @@ export default function TeamEditPage() {
   };
 
   if (error) {
-    return <p style={{ color: 'red' }}>{error}</p>;
+    return (
+      <Container>
+        <ErrorAlert message={error} />
+      </Container>
+    );
   }
 
   if (!team) {
-    return <p>Loading team...</p>;
+    return <LoadingState text="Loading team..." />;
   }
 
   return (
-    <div>
-      <h1>Edit Team</h1>
+    <Container>
+      <Title order={2} mb="xs">Edit Team</Title>
+
+      <Text c="dimmed" size="sm" mb="md">
+        Update team details
+      </Text>
+
       <TeamForm
         initialValues={team}
         onSubmit={handleUpdate}
         submitText="Update Team"
         coaches={coaches}
       />
-    </div>
+    </Container>
   );
 }

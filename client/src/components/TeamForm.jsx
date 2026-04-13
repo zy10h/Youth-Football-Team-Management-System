@@ -1,58 +1,135 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import api from '../api/api';
+import { useState } from "react";
+import {
+  Paper,
+  Stack,
+  Title,
+  Text,
+  Alert,
+  TextInput,
+  NumberInput,
+  MultiSelect,
+  Select,
+  Button,
+  Group,
+} from "@mantine/core";
 
-export default function TeamsPage() {
-  const [teams, setTeams] = useState([]);
+const daysOptions = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
 
-  useEffect(() => {
-    async function fetchTeams() {
-      const res = await api.get('/teams');
-      setTeams(res.data);
+export default function TeamForm({
+  initialValues,
+  onSubmit,
+  submitText = "Save Team",
+  coaches = [],
+}) {
+  const [form, setForm] = useState({
+    maxAge: initialValues?.maxAge || "",
+    trainingDays: initialValues?.trainingDays || [],
+    coach: initialValues?.coach?._id || initialValues?.coach || "",
+  });
+
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const generatedName = form.maxAge ? `U${form.maxAge}` : "";
+
+  const handleChange = (field, value) => {
+    setForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    if (!form.maxAge) {
+      setError("Maximum age is required.");
+      return;
     }
-    fetchTeams();
-  }, []);
+
+    try {
+      setSubmitting(true);
+
+      await onSubmit({
+        name: `U${form.maxAge}`,
+        maxAge: Number(form.maxAge),
+        trainingDays: form.trainingDays,
+        coach: form.coach || null,
+      });
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to save team");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
-    <div>
-      <h1>Teams</h1>
+    <Paper withBorder shadow="sm" p="lg" radius="md">
+      <form onSubmit={handleSubmit}>
+        <Stack>
+          <div>
+            <Title order={3}>Team Details</Title>
+            <Text c="dimmed" size="sm">
+              Enter team information
+            </Text>
+          </div>
 
-      <table border="1" cellPadding="8">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Max Age</th>
-            <th>Training Days</th>
-            <th>Players</th>
-          </tr>
-        </thead>
+          {error && <Alert color="red">{error}</Alert>}
 
-        <tbody>
-          {teams.map((team) => (
-            <tr key={team._id}>
-              <td>
-                <Link to={`/teams/${team._id}`}>
-                  {team.name}
-                </Link>
-              </td>
-              <td>{team.maxAge}</td>
-              <td>{team.trainingDays?.join(', ') || 'N/A'}</td>
+          <NumberInput
+            label="Maximum Age"
+            value={form.maxAge}
+            onChange={(value) => handleChange("maxAge", value)}
+            min={5}
+            max={25}
+            required
+          />
 
-              <td>
-                {team.players?.length ? (
-                  team.players.map((p) => (
-                    <div key={p._id}>
-                      {p.firstName} {p.lastName} (#{p.jerseyNumber})
-                    </div>
-                  ))
-                ) : (
-                  'No players'
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          <TextInput
+            label="Team Name"
+            value={generatedName}
+            readOnly
+            placeholder="Will be generated from maximum age"
+          />
+
+          <MultiSelect
+            label="Training Days"
+            data={daysOptions}
+            value={form.trainingDays}
+            onChange={(value) => handleChange("trainingDays", value)}
+            placeholder="Select training days"
+          />
+
+          <Select
+            label="Coach"
+            value={form.coach}
+            onChange={(value) => handleChange("coach", value || "")}
+            data={[
+              { value: "", label: "Unassigned (No coach)" },
+              ...coaches.map((c) => ({
+                value: c._id,
+                label: `${c.firstName} ${c.lastName}`,
+              })),
+            ]}
+            clearable
+          />
+
+          <Group justify="flex-end">
+            <Button type="submit" loading={submitting}>
+              {submitText}
+            </Button>
+          </Group>
+        </Stack>
+      </form>
+    </Paper>
   );
 }

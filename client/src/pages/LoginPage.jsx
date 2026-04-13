@@ -1,70 +1,80 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import api from '../api/api';
-import { useAuth } from '../context/AuthContext';
+import { useState } from "react";
+import {
+  Container,
+  Paper,
+  Title,
+  TextInput,
+  PasswordInput,
+  Button,
+  Stack,
+  Alert,
+  Text
+} from "@mantine/core";
+import { useNavigate } from "react-router-dom";
+import api from "../api/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
-  const navigate = useNavigate();
   const { login } = useAuth();
+  const navigate = useNavigate();
 
   const [form, setForm] = useState({
-    username: '',
-    password: ''
+    username: "",
+    password: "",
   });
-  const [error, setError] = useState('');
 
-  const handleChange = (event) => {
-    setForm({
-      ...form,
-      [event.target.name]: event.target.value
-    });
+  const [error, setError] = useState("");
+
+  const handleChange = (field, value) => {
+    setForm({ ...form, [field]: value });
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setError('');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
     try {
-      const response = await api.post('/auth/login', form);
-      login(response.data.token, response.data.user);
-      navigate('/players');
+      const res = await api.post("/auth/login", form);
+      login(res.data.token, res.data.user);
+      navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError("Invalid username or password");
     }
   };
 
   return (
-    <div style={{ maxWidth: '400px' }}>
-      <h1>Login</h1>
+    <Container size={420} my={80}>
+      <Title ta="center">Youth Academy System</Title>
+      <Text ta="center" c="dimmed" size="sm" mb="md">
+        Sign in to continue
+      </Text>
 
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '12px' }}>
-          <label htmlFor="username">Username</label>
-          <br />
-          <input
-            id="username"
-            name="username"
-            value={form.username}
-            onChange={handleChange}
-          />
-        </div>
+      <Paper withBorder shadow="md" p="lg" radius="md">
+        <form onSubmit={handleSubmit}>
+          <Stack>
+            {error && <Alert color="red">{error}</Alert>}
 
-        <div style={{ marginBottom: '12px' }}>
-          <label htmlFor="password">Password</label>
-          <br />
-          <input
-            id="password"
-            name="password"
-            type="password"
-            value={form.password}
-            onChange={handleChange}
-          />
-        </div>
+            <TextInput
+              label="Username"
+              placeholder="Enter username"
+              value={form.username}
+              onChange={(e) => handleChange("username", e.target.value)}
+              required
+            />
 
-        {error && <p style={{ color: 'red' }}>{error}</p>}
+            <PasswordInput
+              label="Password"
+              placeholder="Enter password"
+              value={form.password}
+              onChange={(e) => handleChange("password", e.target.value)}
+              required
+            />
 
-        <button type="submit">Login</button>
-      </form>
-    </div>
+            <Button type="submit" fullWidth>
+              Login
+            </Button>
+          </Stack>
+        </form>
+      </Paper>
+    </Container>
   );
 }

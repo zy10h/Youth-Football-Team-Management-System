@@ -1,54 +1,80 @@
 import { useEffect, useState } from 'react';
+import {Container,Title,SimpleGrid,Card,Text,Button,Group,Stack} from "@mantine/core";
+import { useNavigate } from "react-router-dom";
 import api from '../api/api';
 
 export default function DashboardPage() {
-  const [playerCount, setPlayerCount] = useState(0);
-  const [teamCount, setTeamCount] = useState(0);
-  const [coachCount, setCoachCount] = useState(0);
-  const [error, setError] = useState('');
+  const [players, setPlayers] = useState(0);
+  const [teams, setTeams] = useState(0);
+  const [coaches, setCoaches] = useState(0);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
-    async function fetchData() {
+    const fetchData = async () => {
       try {
-        const [playersRes, teamsRes, coachesRes] = await Promise.all([
-          api.get('/players'),
-          api.get('/teams'),
-          api.get('/coaches')
-        ]);
+        const p = await api.get("/players");
+        const t = await api.get("/teams");
+        const c = await api.get("/coaches");
 
-        setPlayerCount(playersRes.data.total || 0);
-        setTeamCount(teamsRes.data.length || 0);
-        setCoachCount(coachesRes.data.length || 0);
+        setPlayers(p.data.total || p.data.length);
+        setTeams(t.data.length);
+        setCoaches(c.data.length);
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load dashboard');
+        console.error(err);
       }
-    }
+    };
 
     fetchData();
   }, []);
 
   return (
-    <div>
-      <h1>Dashboard</h1>
+    <Container>
+      <Title mb="md">Dashboard</Title>
 
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      <SimpleGrid cols={3} spacing="lg">
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Stack>
+            <Text size="lg">Players</Text>
+            <Title>{players}</Title>
+            <Button onClick={() => navigate("/players")}>
+              View Players
+            </Button>
+          </Stack>
+        </Card>
 
-      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-        <div style={{ border: '1px solid #ccc', padding: '16px', minWidth: '180px' }}>
-          <h3>Total Players</h3>
-          <p>{playerCount}</p>
-        </div>
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Stack>
+            <Text size="lg">Teams</Text>
+            <Title>{teams}</Title>
+            <Button onClick={() => navigate("/teams")}>
+              View Teams
+            </Button>
+          </Stack>
+        </Card>
 
-        <div style={{ border: '1px solid #ccc', padding: '16px', minWidth: '180px' }}>
-          <h3>Total Teams</h3>
-          <p>{teamCount}</p>
-        </div>
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Stack>
+            <Text size="lg">Coaches</Text>
+            <Title>{coaches}</Title>
+            <Button onClick={() => navigate("/coaches")}>
+              View Coaches
+            </Button>
+          </Stack>
+        </Card>
+      </SimpleGrid>
 
-        <div style={{ border: '1px solid #ccc', padding: '16px', minWidth: '180px' }}>
-          <h3>Total Coaches</h3>
-          <p>{coachCount}</p>
-        </div>
-      </div>
-    </div>
+      <Group mt="xl">
+        <Button onClick={() => navigate("/players/new")}>
+          Add Player
+        </Button>
+        <Button onClick={() => navigate("/teams/new")}>
+          Add Team
+        </Button>
+        <Button onClick={() => navigate("/coaches/new")}>
+          Add Coach
+        </Button>
+      </Group>
+    </Container>
   );
 }

@@ -1,23 +1,26 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import api from '../api/api';
-import PlayerForm from '../components/PlayerForm';
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { Container, Title, Text } from "@mantine/core";
+import api from "../api/api";
+import PlayerForm from "../components/PlayerForm";
+import LoadingState from "../components/LoadingState";
+import ErrorAlert from "../components/ErrorAlert";
 
 export default function PlayerEditPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [player, setPlayer] = useState(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function fetchPlayer() {
       try {
         const response = await api.get(`/players/${id}`);
         setPlayer(response.data);
-        setError('');
+        setError("");
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load player');
+        setError(err.response?.data?.message || "Failed to load player");
       }
     }
 
@@ -30,21 +33,32 @@ export default function PlayerEditPage() {
   };
 
   if (error) {
-    return <p style={{ color: 'red' }}>{error}</p>;
+    return (
+      <Container>
+        <ErrorAlert message={error} />
+      </Container>
+    );
   }
 
   if (!player) {
-    return <p>Loading player...</p>;
+    return <LoadingState text="Loading player..." />;
   }
 
   return (
-    <div>
-      <h1>Edit Player</h1>
+    <Container>
+      <Title order={2} mb="xs">
+        Edit Player
+      </Title>
+
+      <Text c="dimmed" size="sm" mb="md">
+        Update player information
+      </Text>
+
       <PlayerForm
         initialValues={player}
         onSubmit={handleUpdate}
         submitText="Update Player"
       />
-    </div>
+    </Container>
   );
 }

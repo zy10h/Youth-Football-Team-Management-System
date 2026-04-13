@@ -35,7 +35,7 @@ async function validateJerseyNumber(teamId, jerseyNumber, excludeId = null) {
   const existingPlayer = await Player.findOne(query);
 
   if (existingPlayer) {
-    return 'This jersey number is already taken in the selected team';
+    return 'This kit number is already taken in the selected team';
   }
 
   return null;
@@ -58,7 +58,6 @@ async function getAllPlayers(req, res, next) {
     const limitNumber = Number(limit);
     const skip = (pageNumber - 1) * limitNumber;
 
-    // GK → DEF → MID → FW
     const positionOrder = {
       Goalkeeper: 1,
       'Centre Back': 2,
@@ -70,12 +69,15 @@ async function getAllPlayers(req, res, next) {
       Striker: 4
     };
 
+    let total = 0;
+    let players = [];
+
     if (sort === 'position' || sort === '-position') {
-      const players = await Player.find(query)
+      const allPlayers = await Player.find(query)
         .populate('team')
         .populate('createdBy', 'username role');
 
-      players.sort((a, b) => {
+      allPlayers.sort((a, b) => {
         const orderA = positionOrder[a.preferredPosition] || 999;
         const orderB = positionOrder[b.preferredPosition] || 999;
 
@@ -96,31 +98,55 @@ async function getAllPlayers(req, res, next) {
           return jerseyA - jerseyB;
         }
 
-        const lastNameA = a.lastName || '';
-        const lastNameB = b.lastName || '';
-        return lastNameA.localeCompare(lastNameB);
+        return (a.lastName || '').localeCompare(b.lastName || '');
       });
 
-      const paginatedPlayers = players.slice(skip, skip + limitNumber);
+      total = allPlayers.length;
+      players = allPlayers.slice(skip, skip + limitNumber);
+    } else {
+      total = await Player.countDocuments(query);
 
-      return res.status(200).json({
-        total: players.length,
-        page: pageNumber,
-        limit: limitNumber,
-        players: paginatedPlayers
-      });
+      players = await Player.find(query)
+        .populate('team')
+        .populate('createdBy', 'username role')
+        .sort(sort)
+        .skip(skip)
+        .limit(limitNumber);
     }
 
-    const total = await Player.countDocuments(query);
+    const baseUrl = `${req.protocol}://${req.get('host')}${req.baseUrl}${req.path}`;
+    const links = [];
 
-    const players = await Player.find(query)
-      .populate('team')
-      .populate('createdBy', 'username role')
-      .sort(sort)
-      .skip(skip)
-      .limit(limitNumber);
+    const makeUrl = (targetPage) => {
+      const params = new URLSearchParams();
 
-    res.status(200).json({
+      params.set('page', targetPage);
+      params.set('limit', limitNumber);
+
+      if (search) {
+        params.set('search', search);
+      }
+
+      if (sort) {
+        params.set('sort', sort);
+      }
+
+      return `${baseUrl}?${params.toString()}`;
+    };
+
+    if (pageNumber > 1) {
+      links.push(`<${makeUrl(pageNumber - 1)}>; rel="prev"`);
+    }
+
+    if (pageNumber * limitNumber < total) {
+      links.push(`<${makeUrl(pageNumber + 1)}>; rel="next"`);
+    }
+
+    if (links.length > 0) {
+      res.setHeader('Link', links.join(', '));
+    }
+
+    return res.status(200).json({
       total,
       page: pageNumber,
       limit: limitNumber,

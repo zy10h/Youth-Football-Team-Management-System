@@ -1,54 +1,122 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import api from '../api/api';
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  Container,
+  Title,
+  Group,
+  Button,
+  Paper,
+  Table,
+  Text,
+  TextInput,
+} from "@mantine/core";
+import api from "../api/api";
+import LoadingState from "../components/LoadingState";
+import ErrorAlert from "../components/ErrorAlert";
+import LinkText from "../components/LinkText";
 
 export default function CoachesPage() {
   const [coaches, setCoaches] = useState([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    async function fetchCoaches() {
-      const response = await api.get('/coaches');
-      setCoaches(response.data || []);
-    }
+    const fetchCoaches = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const res = await api.get("/coaches");
+        setCoaches(res.data || []);
+      } catch (err) {
+        setError("Failed to load coaches.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
     fetchCoaches();
   }, []);
 
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <h1>Coaches</h1>
-        <Link to="/coaches/new">
-          <button>Add Coach</button>
-        </Link>
-      </div>
+  const filteredCoaches = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
 
-      {coaches.length === 0 ? (
-        <p>No coaches found.</p>
+    if (!keyword) return coaches;
+
+    return coaches.filter((coach) => {
+      const fullName = `${coach.firstName || ""} ${coach.lastName || ""}`.toLowerCase();
+      const email = (coach.email || "").toLowerCase();
+      const phone = (coach.phone || "").toLowerCase();
+
+      return (
+        fullName.includes(keyword) ||
+        email.includes(keyword) ||
+        phone.includes(keyword)
+      );
+    });
+  }, [coaches, search]);
+
+  return (
+    <Container>
+      <Group justify="space-between" mb="md">
+        <div>
+          <Title order={2}>Coaches</Title>
+          <Text c="dimmed" size="sm">
+            View and manage academy coaches
+          </Text>
+        </div>
+
+        <Button component={Link} to="/coaches/new">
+          Add Coach
+        </Button>
+      </Group>
+
+      <ErrorAlert message={error} />
+
+      <Paper withBorder p="md" mb="md">
+        <TextInput
+          label="Search"
+          placeholder="Search by name, email, or phone"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </Paper>
+
+      {loading ? (
+        <LoadingState text="Loading coaches..." />
+      ) : filteredCoaches.length === 0 ? (
+        <Paper withBorder p="xl">
+          <Text ta="center" c="dimmed">
+            No coaches found.
+          </Text>
+        </Paper>
       ) : (
-        <table border="1" cellPadding="8">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-            </tr>
-          </thead>
-          <tbody>
-            {coaches.map((coach) => (
-              <tr key={coach._id}>
-                <td>
-                  <Link to={`/coaches/${coach._id}`}>
-                    {coach.firstName} {coach.lastName}
-                  </Link>
-                </td>
-                <td>{coach.email || 'N/A'}</td>
-                <td>{coach.phone || 'N/A'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Paper withBorder p="md">
+          <Table striped highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Name</Table.Th>
+                <Table.Th>Email</Table.Th>
+                <Table.Th>Phone</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+
+            <Table.Tbody>
+              {filteredCoaches.map((coach) => (
+                <Table.Tr key={coach._id}>
+                  <Table.Td>
+                    <LinkText to={`/coaches/${coach._id}`}>
+                      {coach.firstName} {coach.lastName}
+                    </LinkText>
+                  </Table.Td>
+                  <Table.Td>{coach.email || "-"}</Table.Td>
+                  <Table.Td>{coach.phone || "-"}</Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Paper>
       )}
-    </div>
+    </Container>
   );
 }

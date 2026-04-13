@@ -1,5 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
+
 const {
   getAllPlayers,
   getPlayerById,
@@ -13,13 +14,13 @@ const validateMiddleware = require('../middleware/validateMiddleware');
 
 const router = express.Router();
 
-router.get('/', getAllPlayers);
-router.get('/:id', getPlayerById);
-
 const jerseyValidation = body('jerseyNumber')
   .optional()
   .isInt({ min: 1, max: 99 })
   .withMessage('Jersey number must be between 1 and 99');
+
+router.get('/', getAllPlayers);
+router.get('/:id', getPlayerById);
 
 router.post(
   '/',

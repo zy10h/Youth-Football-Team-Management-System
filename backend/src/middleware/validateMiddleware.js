@@ -1,6 +1,7 @@
+console.log('validateMiddleware loaded correctly');
 const { validationResult } = require('express-validator');
 
-function validateMiddleware(req, res, next) {
+const validateMiddleware = (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
@@ -11,6 +12,6 @@ function validateMiddleware(req, res, next) {
   }
 
   next();
-}
+};
 
 module.exports = validateMiddleware;

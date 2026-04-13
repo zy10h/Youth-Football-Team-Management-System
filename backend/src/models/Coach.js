@@ -14,12 +14,13 @@ const coachSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: true,
-      trim: true
+      trim: true,
+      default: ""
     },
     phone: {
       type: String,
-      trim: true
+      trim: true,
+      default: ""
     },
     assignedTeams: [
       {
@@ -32,5 +33,19 @@ const coachSchema = new mongoose.Schema(
     timestamps: true
   }
 );
+
+coachSchema.pre("validate", function (next) {
+  const hasEmail = this.email && this.email.trim() !== "";
+  const hasPhone = this.phone && this.phone.trim() !== "";
+
+  if (!hasEmail && !hasPhone) {
+    this.invalidate(
+      "email",
+      "Either email or phone is required."
+    );
+  }
+
+  next();
+});
 
 module.exports = mongoose.model('Coach', coachSchema);

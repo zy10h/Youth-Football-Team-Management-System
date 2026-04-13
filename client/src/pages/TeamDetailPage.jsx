@@ -1,24 +1,39 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import api from '../api/api';
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  Container,
+  Title,
+  Text,
+  Paper,
+  Stack,
+  Group,
+  Button,
+  Badge,
+  Divider,
+  Table,
+} from "@mantine/core";
+import api from "../api/api";
+import LoadingState from "../components/LoadingState";
+import ErrorAlert from "../components/ErrorAlert";
+import LinkText from "../components/LinkText";
 
 export default function TeamDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [team, setTeam] = useState(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [deleting, setDeleting] = useState(false);
-  const [playerSort, setPlayerSort] = useState('positionAsc');
+  const [sort, setSort] = useState("position_asc");
 
   useEffect(() => {
     async function fetchTeam() {
       try {
-        const response = await api.get(`/teams/${id}`);
-        setTeam(response.data);
-        setError('');
+        const res = await api.get(`/teams/${id}`);
+        setTeam(res.data);
+        setError("");
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load team');
+        setError(err.response?.data?.message || "Failed to load team");
       }
     }
 
@@ -27,23 +42,51 @@ export default function TeamDetailPage() {
 
   const positionOrder = {
     Goalkeeper: 1,
-    'Centre Back': 2,
+    "Centre Back": 2,
     Fullback: 2,
-    'Defensive Midfielder': 3,
-    'Central Midfielder': 3,
-    'Attacking Midfielder': 3,
-    'Winger/Wide Midfielder': 4,
-    Striker: 4
+    "Defensive Midfielder": 3,
+    "Central Midfielder": 3,
+    "Attacking Midfielder": 3,
+    "Winger/Wide Midfielder": 4,
+    Striker: 4,
+  };
+
+  const handleSortClick = (field) => {
+    if (sort === `${field}_asc`) {
+      setSort(`${field}_desc`);
+    } else {
+      setSort(`${field}_asc`);
+    }
   };
 
   const sortedPlayers = useMemo(() => {
     if (!team?.players) return [];
 
-    const playersCopy = [...team.players];
+    const list = [...team.players];
 
-    switch (playerSort) {
-      case 'positionAsc':
-        return playersCopy.sort((a, b) => {
+    switch (sort) {
+      case "name_asc":
+        return list.sort((a, b) =>
+          `${a.lastName} ${a.firstName}`.localeCompare(
+            `${b.lastName} ${b.firstName}`
+          )
+        );
+
+      case "name_desc":
+        return list.sort((a, b) =>
+          `${b.lastName} ${b.firstName}`.localeCompare(
+            `${a.lastName} ${a.firstName}`
+          )
+        );
+
+      case "age_asc":
+        return list.sort((a, b) => (a.age ?? 999) - (b.age ?? 999));
+
+      case "age_desc":
+        return list.sort((a, b) => (b.age ?? -1) - (a.age ?? -1));
+
+      case "position_asc":
+        return list.sort((a, b) => {
           const aPos = positionOrder[a.preferredPosition] || 999;
           const bPos = positionOrder[b.preferredPosition] || 999;
 
@@ -54,8 +97,8 @@ export default function TeamDetailPage() {
           return aNum - bNum;
         });
 
-      case 'positionDesc':
-        return playersCopy.sort((a, b) => {
+      case "position_desc":
+        return list.sort((a, b) => {
           const aPos = positionOrder[a.preferredPosition] || 0;
           const bPos = positionOrder[b.preferredPosition] || 0;
 
@@ -66,156 +109,193 @@ export default function TeamDetailPage() {
           return bNum - aNum;
         });
 
-      case 'jerseyAsc':
-        return playersCopy.sort((a, b) => {
-          const aNum = a.jerseyNumber ?? 999;
-          const bNum = b.jerseyNumber ?? 999;
-          return aNum - bNum;
-        });
+      case "jersey_asc":
+        return list.sort(
+          (a, b) => (a.jerseyNumber ?? 999) - (b.jerseyNumber ?? 999)
+        );
 
-      case 'jerseyDesc':
-        return playersCopy.sort((a, b) => {
-          const aNum = a.jerseyNumber ?? -1;
-          const bNum = b.jerseyNumber ?? -1;
-          return bNum - aNum;
-        });
-
-      case 'nameAsc':
-        return playersCopy.sort((a, b) => {
-          const aName = `${a.lastName} ${a.firstName}`;
-          const bName = `${b.lastName} ${b.firstName}`;
-          return aName.localeCompare(bName);
-        });
-
-      case 'nameDesc':
-        return playersCopy.sort((a, b) => {
-          const aName = `${a.lastName} ${a.firstName}`;
-          const bName = `${b.lastName} ${b.firstName}`;
-          return bName.localeCompare(aName);
-        });
-
-      case 'ageAsc':
-        return playersCopy.sort((a, b) => (a.age ?? 999) - (b.age ?? 999));
-
-      case 'ageDesc':
-        return playersCopy.sort((a, b) => (b.age ?? -1) - (a.age ?? -1));
+      case "jersey_desc":
+        return list.sort(
+          (a, b) => (b.jerseyNumber ?? -1) - (a.jerseyNumber ?? -1)
+        );
 
       default:
-        return playersCopy;
+        return list;
     }
-  }, [team, playerSort]);
+  }, [team, sort]);
 
   const handleDelete = async () => {
-    const confirmed = window.confirm('Are you sure you want to delete this team?');
-
+    const confirmed = window.confirm("Are you sure you want to delete this team?");
     if (!confirmed) return;
 
     try {
       setDeleting(true);
       await api.delete(`/teams/${id}`);
-      navigate('/teams');
+      navigate("/teams");
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete team');
+      setError(err.response?.data?.message || "Failed to delete team");
     } finally {
       setDeleting(false);
     }
   };
 
   if (error) {
-    return <p style={{ color: 'red' }}>{error}</p>;
+    return (
+      <Container>
+        <ErrorAlert message={error} />
+      </Container>
+    );
   }
 
   if (!team) {
-    return <p>Loading team...</p>;
+    return <LoadingState text="Loading team..." />;
   }
 
   return (
-    <div>
-      <h1>{team.name}</h1>
+    <Container>
+      <Group justify="space-between" mb="md">
+        <Title order={2}>{team.name}</Title>
 
-      <p><strong>Maximum age:</strong> {team.maxAge}</p>
-      <p>
-        <strong>Training days:</strong>{' '}
-        {team.trainingDays?.length ? team.trainingDays.join(', ') : 'N/A'}
-      </p>
-      <p>
-        <strong>Coach:</strong>{' '}
-        {team.coach
-          ? `${team.coach.firstName} ${team.coach.lastName}`
-          : 'Not assigned'}
-      </p>
+        <Group>
+          <Button
+            component={Link}
+            to={`/teams/${team._id}/edit`}
+            variant="outline"
+          >
+            Edit
+          </Button>
 
-      <h2>Registered Players</h2>
+          <Button
+            color="red"
+            onClick={handleDelete}
+            loading={deleting}
+          >
+            Delete
+          </Button>
+        </Group>
+      </Group>
 
-      {team.players?.length ? (
-        <>
-          <div style={{ marginBottom: '12px' }}>
-            <label>Sort players</label>
-            <br />
-            <select
-              value={playerSort}
-              onChange={(e) => setPlayerSort(e.target.value)}
-            >
-              <option value="positionAsc">Preferred Position (GK → DEF → MID → FW)</option>
-              <option value="positionDesc">Preferred Position (FW → MID → DEF → GK)</option>
-              <option value="jerseyAsc">Jersey number low-high</option>
-              <option value="jerseyDesc">Jersey number high-low</option>
-              <option value="nameAsc">Last name A-Z</option>
-              <option value="nameDesc">Last name Z-A</option>
-              <option value="ageAsc">Age low-high</option>
-              <option value="ageDesc">Age high-low</option>
-            </select>
-          </div>
+      <Paper withBorder p="lg" mb="md">
+        <Stack gap="sm">
+          <Divider label="Team Info" labelPosition="left" />
 
-          <table border="1" cellPadding="8">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Jersey Number</th>
-                <th>Age</th>
-                <th>Preferred Position</th>
-                <th>Alternative Positions</th>
-              </tr>
-            </thead>
+          <Text>
+            <strong>Maximum Age:</strong> {team.maxAge}
+          </Text>
 
-            <tbody>
-              {sortedPlayers.map((player) => (
-                <tr key={player._id}>
-                  <td>
-                    <Link to={`/players/${player._id}`}>
-                      {player.firstName} {player.lastName}
-                    </Link>
-                  </td>
+          <Text>
+            <strong>Training Day(s):</strong>{" "}
+            {team.trainingDays?.length
+              ? team.trainingDays.map((day) => (
+                  <Badge key={day} mr={6} mb={4}>
+                    {day}
+                  </Badge>
+                ))
+              : "None"}
+          </Text>
 
-                  <td>{player.jerseyNumber || 'N/A'}</td>
+          <Text>
+            <strong>Coach:</strong>{" "}
+            {team.coach
+              ? `${team.coach.firstName} ${team.coach.lastName}`
+              : "Unassigned"}
+          </Text>
+        </Stack>
+      </Paper>
 
-                  <td>{player.age ?? 'N/A'}</td>
+      <Title order={3} mb="sm">
+        Players
+      </Title>
 
-                  <td>{player.preferredPosition || 'N/A'}</td>
-
-                  <td>
-                    {player.alternativePositions?.length
-                      ? player.alternativePositions.join(', ')
-                      : 'None'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
+      {sortedPlayers.length === 0 ? (
+        <Paper withBorder p="xl">
+          <Text ta="center" c="dimmed">
+            No players registered in this team.
+          </Text>
+        </Paper>
       ) : (
-        <p>No players registered in this team.</p>
+        <Paper withBorder p="md">
+          <Table striped highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th
+                  onClick={() => handleSortClick("name")}
+                  style={{ cursor: "pointer", userSelect: "none" }}
+                >
+                  Name{" "}
+                  {sort.includes("name")
+                    ? sort === "name_asc"
+                      ? "(Last Name A-Z)"
+                      : "(Last Name Z-A)"
+                    : ""}
+                </Table.Th>
+
+                <Table.Th
+                  onClick={() => handleSortClick("age")}
+                  style={{ cursor: "pointer", userSelect: "none" }}
+                >
+                  Age{" "}
+                  {sort.includes("age")
+                    ? sort === "age_asc"
+                      ? "↑"
+                      : "↓"
+                    : ""}
+                </Table.Th>
+
+                <Table.Th
+                  onClick={() => handleSortClick("position")}
+                  style={{ cursor: "pointer", userSelect: "none" }}
+                >
+                  Preferred Position{" "}
+                  {sort.includes("position")
+                    ? sort === "position_asc"
+                      ? "(GK - FW)"
+                      : "(FW - GK)"
+                    : ""}
+                </Table.Th>
+
+                <Table.Th>Alternative Positions</Table.Th>
+
+                <Table.Th
+                  onClick={() => handleSortClick("jersey")}
+                  style={{ cursor: "pointer", userSelect: "none" }}
+                >
+                  Kit Number{" "}
+                  {sort.includes("jersey")
+                    ? sort === "jersey_asc"
+                      ? "↑"
+                      : "↓"
+                    : ""}
+                </Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+
+            <Table.Tbody>
+              {sortedPlayers.map((player) => (
+                <Table.Tr key={player._id}>
+                  <Table.Td>
+                    <LinkText to={`/players/${player._id}`}>
+                      {player.firstName} {player.lastName}
+                    </LinkText>
+                  </Table.Td>
+
+                  <Table.Td>{player.age ?? "-"}</Table.Td>
+
+                  <Table.Td>{player.preferredPosition || "-"}</Table.Td>
+
+                  <Table.Td>
+                    {player.alternativePositions?.length
+                      ? player.alternativePositions.join(", ")
+                      : "None"}
+                  </Table.Td>
+
+                  <Table.Td>{player.jerseyNumber ?? "-"}</Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Paper>
       )}
-
-      <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
-        <Link to={`/teams/${team._id}/edit`}>
-          <button>Edit Team</button>
-        </Link>
-
-        <button onClick={handleDelete} disabled={deleting}>
-          {deleting ? 'Deleting...' : 'Delete Team'}
-        </button>
-      </div>
-    </div>
+    </Container>
   );
 }

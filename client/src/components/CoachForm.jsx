@@ -1,79 +1,120 @@
-import { useState } from 'react';
+import { useState } from "react";
+import {
+  Paper,
+  Stack,
+  Title,
+  Text,
+  Alert,
+  TextInput,
+  Button,
+  Group,
+  Divider,
+} from "@mantine/core";
 
 export default function CoachForm({
   initialValues,
   onSubmit,
-  submitText = 'Save Coach'
+  submitText = "Save Coach",
 }) {
   const [form, setForm] = useState({
-    firstName: initialValues?.firstName || '',
-    lastName: initialValues?.lastName || '',
-    email: initialValues?.email || '',
-    phone: initialValues?.phone || ''
+    firstName: initialValues?.firstName || "",
+    lastName: initialValues?.lastName || "",
+    email: initialValues?.email || "",
+    phone: initialValues?.phone || "",
   });
 
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const handleChange = (event) => {
-    setForm({
-      ...form,
-      [event.target.name]: event.target.value
-    });
+  const handleChange = (field, value) => {
+    setForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setError('');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
 
     if (!form.firstName.trim() || !form.lastName.trim()) {
-      setError('First name and last name are required.');
+      setError("First name and last name are required.");
+      return;
+    }
+
+    if (!form.email.trim() && !form.phone.trim()) {
+      setError("Please provide either an email or a phone number.");
       return;
     }
 
     try {
       setSubmitting(true);
-      await onSubmit(form);
+
+      await onSubmit({
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+      });
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save coach');
+      setError(err.response?.data?.message || "Failed to save coach");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: '500px' }}>
+    <Paper withBorder shadow="sm" p="lg" radius="md">
       <form onSubmit={handleSubmit}>
-        <div>
-          <label>First name</label>
-          <br />
-          <input name="firstName" value={form.firstName} onChange={handleChange} />
-        </div>
+        <Stack gap="md">
+          <div>
+            <Title order={3}>Coach Details</Title>
+            <Text c="dimmed" size="sm">
+              Enter coach information below
+            </Text>
+          </div>
 
-        <div>
-          <label>Last name</label>
-          <br />
-          <input name="lastName" value={form.lastName} onChange={handleChange} />
-        </div>
+          {error && <Alert color="red">{error}</Alert>}
 
-        <div>
-          <label>Email</label>
-          <br />
-          <input name="email" value={form.email} onChange={handleChange} />
-        </div>
+          <Divider label="Basic Info" labelPosition="left" />
 
-        <div>
-          <label>Phone</label>
-          <br />
-          <input name="phone" value={form.phone} onChange={handleChange} />
-        </div>
+          <Group grow>
+            <TextInput
+              label="First Name"
+              value={form.firstName}
+              onChange={(e) => handleChange("firstName", e.target.value)}
+              required
+            />
+            <TextInput
+              label="Last Name"
+              value={form.lastName}
+              onChange={(e) => handleChange("lastName", e.target.value)}
+              required
+            />
+          </Group>
 
-        {error && <p style={{ color: 'red' }}>{error}</p>}
+          <Divider label="Contact Info (Please enter one or both of the following)" labelPosition="left" />
 
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Saving...' : submitText}
-        </button>
+          <TextInput
+            label="Email"
+            type="email"
+            value={form.email}
+            onChange={(e) => handleChange("email", e.target.value)}
+          />
+
+          <TextInput
+            label="Phone"
+            value={form.phone}
+            onChange={(e) => handleChange("phone", e.target.value)}
+          />
+
+          <Group justify="flex-end">
+            <Button type="submit" loading={submitting}>
+              {submitText}
+            </Button>
+          </Group>
+        </Stack>
       </form>
-    </div>
+    </Paper>
   );
 }
