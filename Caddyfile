@@ -1,0 +1,14 @@
+:80 {
+
+    handle /a02/* {
+        uri strip_prefix /a02
+        root * ./frontend
+        file_server
+        try_files {path} /index.html
+    }
+
+    handle /api/* {
+        reverse_proxy localhost:3000
+    }
+
+}
