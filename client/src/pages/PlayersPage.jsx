@@ -36,8 +36,8 @@ export default function PlayersPage() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("name_asc");
   const [page, setPage] = useState(1);
-  const [limit] = useState(10);
-  const [total, setTotal] = useState(0);
+  const [pageInput, setPageInput] = useState("1");
+  const limit = 20;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -50,12 +50,12 @@ export default function PlayersPage() {
   const positionOrder = {
     Goalkeeper: 1,
     "Centre Back": 2,
-    Fullback: 2,
-    "Defensive Midfielder": 3,
-    "Central Midfielder": 3,
-    "Attacking Midfielder": 3,
-    "Winger/Wide Midfielder": 4,
-    Striker: 4,
+    Fullback: 3,
+    "Defensive Midfielder": 4,
+    "Central Midfielder": 5,
+    "Attacking Midfielder": 6,
+    "Winger/Wide Midfielder": 7,
+    Striker: 8,
   };
 
   const handleSortClick = (field) => {
@@ -64,6 +64,7 @@ export default function PlayersPage() {
     } else {
       setSort(`${field}_asc`);
     }
+    setPage(1);
   };
 
   useEffect(() => {
@@ -73,11 +74,10 @@ export default function PlayersPage() {
         setError("");
 
         const res = await api.get("/players", {
-          params: { search, page, limit },
+          params: { search, page: 1, limit: 2000 },
         });
 
         setPlayers(res.data.players || []);
-        setTotal(res.data.total || 0);
       } catch (err) {
         setError("Failed to load players.");
       } finally {
@@ -86,21 +86,15 @@ export default function PlayersPage() {
     };
 
     fetchPlayers();
-  }, [search, page, limit]);
+  }, [search]);
 
   useEffect(() => {
-    if (
-      minAge !== "" &&
-      maxAge !== "" &&
-      Number(minAge) > Number(maxAge)
-    ) {
+    if (minAge !== "" && maxAge !== "" && Number(minAge) > Number(maxAge)) {
       setFilterError("Min Age cannot be greater than Max Age.");
     } else {
       setFilterError("");
     }
   }, [minAge, maxAge]);
-
-  const totalPages = Math.max(1, Math.ceil(total / limit));
 
   const filteredAndSortedPlayers = useMemo(() => {
     const hasInvalidAgeRange =
@@ -156,33 +150,67 @@ export default function PlayersPage() {
         );
 
       case "age_asc":
-        return list.sort((a, b) => (a.age ?? 999) - (b.age ?? 999));
+        return list.sort((a, b) => {
+          const diff = (a.age ?? 999) - (b.age ?? 999);
+          if (diff !== 0) return diff;
+
+          return `${a.lastName} ${a.firstName}`.localeCompare(
+            `${b.lastName} ${b.firstName}`
+          );
+        });
 
       case "age_desc":
-        return list.sort((a, b) => (b.age ?? -1) - (a.age ?? -1));
+        return list.sort((a, b) => {
+          const diff = (b.age ?? -1) - (a.age ?? -1);
+          if (diff !== 0) return diff;
+
+          return `${a.lastName} ${a.firstName}`.localeCompare(
+            `${b.lastName} ${b.firstName}`
+          );
+        });
 
       case "jersey_asc":
-        return list.sort(
-          (a, b) => (a.jerseyNumber ?? 999) - (b.jerseyNumber ?? 999)
-        );
+        return list.sort((a, b) => {
+          const diff = (a.jerseyNumber ?? 999) - (b.jerseyNumber ?? 999);
+          if (diff !== 0) return diff;
+
+          return `${a.lastName} ${a.firstName}`.localeCompare(
+            `${b.lastName} ${b.firstName}`
+          );
+        });
 
       case "jersey_desc":
-        return list.sort(
-          (a, b) => (b.jerseyNumber ?? -1) - (a.jerseyNumber ?? -1)
-        );
+        return list.sort((a, b) => {
+          const diff = (b.jerseyNumber ?? -1) - (a.jerseyNumber ?? -1);
+          if (diff !== 0) return diff;
+
+          return `${a.lastName} ${a.firstName}`.localeCompare(
+            `${b.lastName} ${b.firstName}`
+          );
+        });
 
       case "position_asc":
         return list.sort((a, b) => {
           const aPos = positionOrder[a.preferredPosition] || 999;
           const bPos = positionOrder[b.preferredPosition] || 999;
-          return aPos - bPos;
+
+          if (aPos !== bPos) return aPos - bPos;
+
+          return `${a.lastName} ${a.firstName}`.localeCompare(
+            `${b.lastName} ${b.firstName}`
+          );
         });
 
       case "position_desc":
         return list.sort((a, b) => {
-          const aPos = positionOrder[a.preferredPosition] || 0;
-          const bPos = positionOrder[b.preferredPosition] || 0;
-          return bPos - aPos;
+          const aPos = positionOrder[a.preferredPosition] || 999;
+          const bPos = positionOrder[b.preferredPosition] || 999;
+
+          if (aPos !== bPos) return bPos - aPos;
+
+          return `${a.lastName} ${a.firstName}`.localeCompare(
+            `${b.lastName} ${b.firstName}`
+          );
         });
 
       default:
@@ -196,6 +224,42 @@ export default function PlayersPage() {
     minAge,
     maxAge,
   ]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredAndSortedPlayers.length / limit)
+  );
+
+  const paginatedPlayers = useMemo(() => {
+    const start = (page - 1) * limit;
+    return filteredAndSortedPlayers.slice(start, start + limit);
+  }, [filteredAndSortedPlayers, page, limit]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(1);
+      return;
+    }
+    setPageInput(String(page));
+  }, [page, totalPages]);
+
+  const applyPageInput = () => {
+    if (!pageInput) {
+      setPageInput(String(page));
+      return;
+    }
+
+    const parsed = Number(pageInput);
+
+    if (!Number.isInteger(parsed)) {
+      setPageInput(String(page));
+      return;
+    }
+
+    const nextPage = Math.min(Math.max(parsed, 1), totalPages);
+    setPage(nextPage);
+    setPageInput(String(nextPage));
+  };
 
   return (
     <Container>
@@ -351,7 +415,7 @@ export default function PlayersPage() {
               </Table.Thead>
 
               <Table.Tbody>
-                {filteredAndSortedPlayers.map((player) => (
+                {paginatedPlayers.map((player) => (
                   <Table.Tr key={player._id}>
                     <Table.Td>
                       <LinkText to={`/players/${player._id}`}>
@@ -384,8 +448,25 @@ export default function PlayersPage() {
             </Table>
           </Paper>
 
-          <Group justify="center" mt="md">
+          <Group justify="center" mt="md" gap="sm">
             <Pagination value={page} onChange={setPage} total={totalPages} />
+
+            <NumberInput
+              value={pageInput}
+              onChange={(value) => setPageInput(value ? String(value) : "")}
+              onBlur={applyPageInput}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  applyPageInput();
+                }
+              }}
+              min={1}
+              max={totalPages}
+              clampBehavior="none"
+              placeholder="Page"
+              w={110}
+            />
           </Group>
         </>
       )}

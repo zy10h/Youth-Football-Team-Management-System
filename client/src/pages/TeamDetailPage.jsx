@@ -11,6 +11,8 @@ import {
   Badge,
   Divider,
   Table,
+  Pagination,
+  NumberInput,
 } from "@mantine/core";
 import api from "../api/api";
 import LoadingState from "../components/LoadingState";
@@ -25,6 +27,9 @@ export default function TeamDetailPage() {
   const [error, setError] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [sort, setSort] = useState("position_asc");
+  const [page, setPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
+  const limit = 20;
 
   useEffect(() => {
     async function fetchTeam() {
@@ -43,12 +48,12 @@ export default function TeamDetailPage() {
   const positionOrder = {
     Goalkeeper: 1,
     "Centre Back": 2,
-    Fullback: 2,
-    "Defensive Midfielder": 3,
-    "Central Midfielder": 3,
-    "Attacking Midfielder": 3,
-    "Winger/Wide Midfielder": 4,
-    Striker: 4,
+    Fullback: 3,
+    "Defensive Midfielder": 4,
+    "Central Midfielder": 5,
+    "Attacking Midfielder": 6,
+    "Winger/Wide Midfielder": 7,
+    Striker: 8,
   };
 
   const handleSortClick = (field) => {
@@ -57,6 +62,7 @@ export default function TeamDetailPage() {
     } else {
       setSort(`${field}_asc`);
     }
+    setPage(1);
   };
 
   const sortedPlayers = useMemo(() => {
@@ -80,10 +86,24 @@ export default function TeamDetailPage() {
         );
 
       case "age_asc":
-        return list.sort((a, b) => (a.age ?? 999) - (b.age ?? 999));
+        return list.sort((a, b) => {
+          const diff = (a.age ?? 999) - (b.age ?? 999);
+          if (diff !== 0) return diff;
+
+          return `${a.lastName} ${a.firstName}`.localeCompare(
+            `${b.lastName} ${b.firstName}`
+          );
+        });
 
       case "age_desc":
-        return list.sort((a, b) => (b.age ?? -1) - (a.age ?? -1));
+        return list.sort((a, b) => {
+          const diff = (b.age ?? -1) - (a.age ?? -1);
+          if (diff !== 0) return diff;
+
+          return `${a.lastName} ${a.firstName}`.localeCompare(
+            `${b.lastName} ${b.firstName}`
+          );
+        });
 
       case "position_asc":
         return list.sort((a, b) => {
@@ -92,37 +112,80 @@ export default function TeamDetailPage() {
 
           if (aPos !== bPos) return aPos - bPos;
 
-          const aNum = a.jerseyNumber ?? 999;
-          const bNum = b.jerseyNumber ?? 999;
-          return aNum - bNum;
+          return `${a.lastName} ${a.firstName}`.localeCompare(
+            `${b.lastName} ${b.firstName}`
+          );
         });
 
       case "position_desc":
         return list.sort((a, b) => {
-          const aPos = positionOrder[a.preferredPosition] || 0;
-          const bPos = positionOrder[b.preferredPosition] || 0;
+          const aPos = positionOrder[a.preferredPosition] || 999;
+          const bPos = positionOrder[b.preferredPosition] || 999;
 
           if (aPos !== bPos) return bPos - aPos;
 
-          const aNum = a.jerseyNumber ?? -1;
-          const bNum = b.jerseyNumber ?? -1;
-          return bNum - aNum;
+          return `${a.lastName} ${a.firstName}`.localeCompare(
+            `${b.lastName} ${b.firstName}`
+          );
         });
 
       case "jersey_asc":
-        return list.sort(
-          (a, b) => (a.jerseyNumber ?? 999) - (b.jerseyNumber ?? 999)
-        );
+        return list.sort((a, b) => {
+          const diff = (a.jerseyNumber ?? 999) - (b.jerseyNumber ?? 999);
+          if (diff !== 0) return diff;
+
+          return `${a.lastName} ${a.firstName}`.localeCompare(
+            `${b.lastName} ${b.firstName}`
+          );
+        });
 
       case "jersey_desc":
-        return list.sort(
-          (a, b) => (b.jerseyNumber ?? -1) - (a.jerseyNumber ?? -1)
-        );
+        return list.sort((a, b) => {
+          const diff = (b.jerseyNumber ?? -1) - (a.jerseyNumber ?? -1);
+          if (diff !== 0) return diff;
+
+          return `${a.lastName} ${a.firstName}`.localeCompare(
+            `${b.lastName} ${b.firstName}`
+          );
+        });
 
       default:
         return list;
     }
   }, [team, sort]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedPlayers.length / limit));
+
+  const paginatedPlayers = useMemo(() => {
+    const start = (page - 1) * limit;
+    return sortedPlayers.slice(start, start + limit);
+  }, [sortedPlayers, page, limit]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(1);
+      return;
+    }
+    setPageInput(String(page));
+  }, [page, totalPages]);
+
+  const applyPageInput = () => {
+    if (!pageInput) {
+      setPageInput(String(page));
+      return;
+    }
+
+    const parsed = Number(pageInput);
+
+    if (!Number.isInteger(parsed)) {
+      setPageInput(String(page));
+      return;
+    }
+
+    const nextPage = Math.min(Math.max(parsed, 1), totalPages);
+    setPage(nextPage);
+    setPageInput(String(nextPage));
+  };
 
   const handleDelete = async () => {
     const confirmed = window.confirm("Are you sure you want to delete this team?");
@@ -165,11 +228,7 @@ export default function TeamDetailPage() {
             Edit
           </Button>
 
-          <Button
-            color="red"
-            onClick={handleDelete}
-            loading={deleting}
-          >
+          <Button color="red" onClick={handleDelete} loading={deleting}>
             Delete
           </Button>
         </Group>
@@ -214,87 +273,110 @@ export default function TeamDetailPage() {
           </Text>
         </Paper>
       ) : (
-        <Paper withBorder p="md">
-          <Table striped highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th
-                  onClick={() => handleSortClick("name")}
-                  style={{ cursor: "pointer", userSelect: "none" }}
-                >
-                  Name{" "}
-                  {sort.includes("name")
-                    ? sort === "name_asc"
-                      ? "(Last Name A-Z)"
-                      : "(Last Name Z-A)"
-                    : ""}
-                </Table.Th>
+        <>
+          <Paper withBorder p="md">
+            <Table striped highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th
+                    onClick={() => handleSortClick("name")}
+                    style={{ cursor: "pointer", userSelect: "none" }}
+                  >
+                    Name{" "}
+                    {sort.includes("name")
+                      ? sort === "name_asc"
+                        ? "(Last Name A-Z)"
+                        : "(Last Name Z-A)"
+                      : ""}
+                  </Table.Th>
 
-                <Table.Th
-                  onClick={() => handleSortClick("age")}
-                  style={{ cursor: "pointer", userSelect: "none" }}
-                >
-                  Age{" "}
-                  {sort.includes("age")
-                    ? sort === "age_asc"
-                      ? "↑"
-                      : "↓"
-                    : ""}
-                </Table.Th>
+                  <Table.Th
+                    onClick={() => handleSortClick("age")}
+                    style={{ cursor: "pointer", userSelect: "none" }}
+                  >
+                    Age{" "}
+                    {sort.includes("age")
+                      ? sort === "age_asc"
+                        ? "↑"
+                        : "↓"
+                      : ""}
+                  </Table.Th>
 
-                <Table.Th
-                  onClick={() => handleSortClick("position")}
-                  style={{ cursor: "pointer", userSelect: "none" }}
-                >
-                  Preferred Position{" "}
-                  {sort.includes("position")
-                    ? sort === "position_asc"
-                      ? "(GK - FW)"
-                      : "(FW - GK)"
-                    : ""}
-                </Table.Th>
+                  <Table.Th
+                    onClick={() => handleSortClick("position")}
+                    style={{ cursor: "pointer", userSelect: "none" }}
+                  >
+                    Preferred Position{" "}
+                    {sort.includes("position")
+                      ? sort === "position_asc"
+                        ? "(GK - FW)"
+                        : "(FW - GK)"
+                      : ""}
+                  </Table.Th>
 
-                <Table.Th>Alternative Positions</Table.Th>
+                  <Table.Th>Alternative Positions</Table.Th>
 
-                <Table.Th
-                  onClick={() => handleSortClick("jersey")}
-                  style={{ cursor: "pointer", userSelect: "none" }}
-                >
-                  Kit Number{" "}
-                  {sort.includes("jersey")
-                    ? sort === "jersey_asc"
-                      ? "↑"
-                      : "↓"
-                    : ""}
-                </Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-
-            <Table.Tbody>
-              {sortedPlayers.map((player) => (
-                <Table.Tr key={player._id}>
-                  <Table.Td>
-                    <LinkText to={`/players/${player._id}`}>
-                      {player.firstName} {player.lastName}
-                    </LinkText>
-                  </Table.Td>
-
-                  <Table.Td>{player.age ?? "-"}</Table.Td>
-
-                  <Table.Td>{player.preferredPosition || "-"}</Table.Td>
-
-                  <Table.Td>
-                    {player.alternativePositions?.length
-                      ? player.alternativePositions.join(", ")
-                      : "None"}
-                  </Table.Td>
-
-                  <Table.Td>{player.jerseyNumber ?? "-"}</Table.Td>
+                  <Table.Th
+                    onClick={() => handleSortClick("jersey")}
+                    style={{ cursor: "pointer", userSelect: "none" }}
+                  >
+                    Kit Number{" "}
+                    {sort.includes("jersey")
+                      ? sort === "jersey_asc"
+                        ? "↑"
+                        : "↓"
+                      : ""}
+                  </Table.Th>
                 </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </Paper>
+              </Table.Thead>
+
+              <Table.Tbody>
+                {paginatedPlayers.map((player) => (
+                  <Table.Tr key={player._id}>
+                    <Table.Td>
+                      <LinkText to={`/players/${player._id}`}>
+                        {player.firstName} {player.lastName}
+                      </LinkText>
+                    </Table.Td>
+
+                    <Table.Td>{player.age ?? "-"}</Table.Td>
+
+                    <Table.Td>{player.preferredPosition || "-"}</Table.Td>
+
+                    <Table.Td>
+                      {player.alternativePositions?.length
+                        ? player.alternativePositions.join(", ")
+                        : "None"}
+                    </Table.Td>
+
+                    <Table.Td>{player.jerseyNumber ?? "-"}</Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Paper>
+
+          <Group justify="center" mt="md" gap="sm">
+            <Pagination value={page} onChange={setPage} total={totalPages} />
+
+            <NumberInput
+              value={pageInput}
+              onChange={(value) => setPageInput(value ? String(value) : "")}
+              onBlur={applyPageInput}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  applyPageInput();
+                }
+              }}
+              min={1}
+              max={totalPages}
+              clampBehavior="none"
+              placeholder="Page"
+              w={110}
+            />
+          </Group>
+        </>
       )}
     </Container>
   );

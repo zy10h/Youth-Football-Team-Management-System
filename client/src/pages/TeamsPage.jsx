@@ -67,12 +67,10 @@ export default function TeamsPage() {
     }
 
     list.sort((a, b) => {
-      const aName = (a.name || "").toLowerCase();
-      const bName = (b.name || "").toLowerCase();
+      const aAge = a.maxAge || 0;
+      const bAge = b.maxAge || 0;
 
-      return sort === "name_asc"
-        ? aName.localeCompare(bName)
-        : bName.localeCompare(aName);
+      return sort === "name_asc" ? aAge - bAge : bAge - aAge;
     });
 
     return list;
@@ -121,8 +119,7 @@ export default function TeamsPage() {
                   onClick={handleSortClick}
                   style={{ cursor: "pointer", userSelect: "none" }}
                 >
-                  Team Name{" "}
-                  {sort === "name_asc" ? "↑" : "↓"}
+                  Team Name {sort === "name_asc" ? "↑" : "↓"}
                 </Table.Th>
                 <Table.Th>Training Days</Table.Th>
                 <Table.Th>Coach</Table.Th>
@@ -133,10 +130,9 @@ export default function TeamsPage() {
               {filteredAndSortedTeams.map((team) => (
                 <Table.Tr key={team._id}>
                   <Table.Td>
-                    <LinkText to={`/teams/${team._id}`}>
-                      {team.name}
-                    </LinkText>
+                    <LinkText to={`/teams/${team._id}`}>{team.name}</LinkText>
                   </Table.Td>
+
                   <Table.Td>
                     {team.trainingDays?.length
                       ? team.trainingDays.map((day) => (

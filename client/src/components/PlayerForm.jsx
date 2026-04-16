@@ -8,7 +8,6 @@ import {
   Group,
   TextInput,
   Select,
-  NumberInput,
   Button,
   Radio,
   Checkbox,
@@ -63,7 +62,7 @@ export default function PlayerForm({
       initialValues?.jerseyNumber !== undefined &&
       initialValues?.jerseyNumber !== null
         ? Number(initialValues.jerseyNumber)
-        : undefined,
+        : "",
 
     guardianName: initialValues?.guardianName || "",
     guardianPhone: initialValues?.guardianPhone || "",
@@ -77,6 +76,7 @@ export default function PlayerForm({
   });
 
   const [teams, setTeams] = useState([]);
+  const [teamPlayers, setTeamPlayers] = useState([]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -105,9 +105,16 @@ export default function PlayerForm({
     );
   }, [age, teams]);
 
+  const effectiveTeamId =
+    form.assignmentMode === "manual" ? form.team : recommendedTeam?._id || "";
+
   const selectedTeam = useMemo(() => {
     return teams.find((team) => team._id === form.team) || null;
   }, [form.team, teams]);
+
+  const effectiveTeam = useMemo(() => {
+    return teams.find((team) => team._id === effectiveTeamId) || null;
+  }, [effectiveTeamId, teams]);
 
   const isOverridingRecommendedTeam =
     form.assignmentMode === "manual" &&
@@ -115,18 +122,129 @@ export default function PlayerForm({
     recommendedTeam &&
     selectedTeam._id !== recommendedTeam._id;
 
+  const teamOptions = useMemo(() => {
+    return teams
+      .slice()
+      .sort((a, b) => a.maxAge - b.maxAge)
+      .map((team) => {
+        const tooOld = age !== null && age > team.maxAge;
+
+        if (tooOld) {
+          return {
+            value: team._id,
+            label: `${team.name} (Unavailable - player is too old)`,
+            disabled: true,
+          };
+        }
+
+        return {
+          value: team._id,
+          label: `${team.name} (U${team.maxAge})`,
+        };
+      });
+  }, [teams, age]);
+
+  useEffect(() => {
+    if (!form.team) return;
+
+    const selected = teams.find((team) => team._id === form.team);
+    if (!selected) return;
+
+    const tooOld = age !== null && age > selected.maxAge;
+
+    if (tooOld) {
+      setForm((prev) => ({
+        ...prev,
+        team: "",
+        jerseyNumber: "",
+      }));
+    }
+  }, [age, form.team, teams]);
+
+  useEffect(() => {
+    async function fetchTeamPlayers() {
+      if (!effectiveTeamId) {
+        setTeamPlayers([]);
+        return;
+      }
+
+      try {
+        const response = await api.get(`/teams/${effectiveTeamId}`);
+        setTeamPlayers(response.data.players || []);
+      } catch (err) {
+        console.error("Failed to load team players", err);
+        setTeamPlayers([]);
+      }
+    }
+
+    fetchTeamPlayers();
+  }, [effectiveTeamId]);
+
+  const currentPlayerId = initialValues?._id || initialValues?.id || null;
+
+  const jerseyOptions = useMemo(() => {
+    return Array.from({ length: 99 }, (_, index) => {
+      const number = index + 1;
+
+      const takenBy = teamPlayers.find(
+        (player) =>
+          Number(player.jerseyNumber) === number &&
+          String(player._id) !== String(currentPlayerId)
+      );
+
+      if (takenBy) {
+        return {
+          value: String(number),
+          label: `${number} - Taken by ${takenBy.firstName} ${takenBy.lastName}`,
+          disabled: true,
+        };
+      }
+
+      return {
+        value: String(number),
+        label: String(number),
+      };
+    });
+  }, [teamPlayers, currentPlayerId]);
+
+  useEffect(() => {
+    if (
+      form.jerseyNumber === "" ||
+      form.jerseyNumber === null ||
+      form.jerseyNumber === undefined
+    ) {
+      return;
+    }
+
+    const selectedValue = String(form.jerseyNumber);
+    const option = jerseyOptions.find((item) => item.value === selectedValue);
+
+    if (!option || option.disabled) {
+      setForm((prev) => ({
+        ...prev,
+        jerseyNumber: "",
+      }));
+    }
+  }, [effectiveTeamId, jerseyOptions, form.jerseyNumber]);
+
   const handleChange = (field, value) => {
     setForm((prev) => {
       const updatedForm = {
         ...prev,
         [field]: value,
-        ...(field === "assignmentMode" && value === "auto" ? { team: "" } : {}),
+        ...(field === "assignmentMode" && value === "auto"
+          ? { team: "" }
+          : {}),
       };
 
       if (field === "preferredPosition") {
         updatedForm.alternativePositions = prev.alternativePositions.filter(
           (position) => position !== value
         );
+      }
+
+      if (field === "team" || field === "assignmentMode" || field === "dateOfBirth") {
+        updatedForm.jerseyNumber = "";
       }
 
       return updatedForm;
@@ -170,19 +288,6 @@ export default function PlayerForm({
       return;
     }
 
-    if (
-      form.jerseyNumber !== undefined &&
-      form.jerseyNumber !== null &&
-      form.jerseyNumber !== ""
-    ) {
-      const jersey = Number(form.jerseyNumber);
-
-      if (!Number.isInteger(jersey) || jersey < 1 || jersey > 99) {
-        setError("Kit number must be between 1 and 99 (inclusive).");
-        return;
-      }
-    }
-
     if (form.assignmentMode === "manual" && !form.team) {
       setError("Please select a team when using manual assignment.");
       return;
@@ -198,6 +303,17 @@ export default function PlayerForm({
 
       if (age !== null && age > chosenTeam.maxAge) {
         setError("Player is too old for the selected team.");
+        return;
+      }
+    }
+
+    if (effectiveTeamId && form.jerseyNumber) {
+      const selectedOption = jerseyOptions.find(
+        (option) => option.value === String(form.jerseyNumber)
+      );
+
+      if (!selectedOption || selectedOption.disabled) {
+        setError("The selected kit number is not available for this team.");
         return;
       }
     }
@@ -226,7 +342,7 @@ export default function PlayerForm({
         playerEmail: form.playerEmail.trim(),
 
         assignmentMode: form.assignmentMode,
-        team: form.assignmentMode === "manual" ? form.team : recommendedTeam?._id,
+        team: effectiveTeamId || undefined,
       });
     } catch (err) {
       console.log("save player error:", err.response?.data || err);
@@ -285,33 +401,18 @@ export default function PlayerForm({
               onChange={(e) => handleChange("dateOfBirth", e.target.value)}
               required
             />
-            <TextInput
-              label="Calculated Age"
-              value={age ?? ""}
-              readOnly
-            />
+            <TextInput label="Calculated Age" value={age ?? ""} readOnly />
           </Group>
 
           <Divider label="Position Information" labelPosition="left" />
 
-          <Group grow align="flex-start">
-            <Select
-              label="Preferred Position"
-              value={form.preferredPosition}
-              onChange={(value) => handleChange("preferredPosition", value || "")}
-              data={positions}
-              required
-            />
-
-            <NumberInput
-              label="Kit Number"
-              value={form.jerseyNumber}
-              onChange={(value) => handleChange("jerseyNumber", value)}
-              min={1}
-              max={99}
-              allowDecimal={false}
-            />
-          </Group>
+          <Select
+            label="Preferred Position"
+            value={form.preferredPosition}
+            onChange={(value) => handleChange("preferredPosition", value || "")}
+            data={positions}
+            required
+          />
 
           <div>
             <Text fw={500} size="sm" mb="xs">
@@ -345,21 +446,42 @@ export default function PlayerForm({
           </Radio.Group>
 
           {form.assignmentMode === "auto" && (
-            <Text size="sm" c="dimmed">
-              Recommended Team: {recommendedTeam ? recommendedTeam.name : "No suitable team found"}
-            </Text>
+            <>
+              <Text size="sm" c="dimmed">
+                Recommended Team:{" "}
+                {recommendedTeam ? recommendedTeam.name : "No suitable team found"}
+              </Text>
+
+              {recommendedTeam && (
+                <Select
+                  label="Kit Number"
+                  placeholder="Select a kit number"
+                  value={
+                    form.jerseyNumber !== undefined &&
+                    form.jerseyNumber !== null &&
+                    form.jerseyNumber !== ""
+                      ? String(form.jerseyNumber)
+                      : null
+                  }
+                  onChange={(value) =>
+                    handleChange("jerseyNumber", value ? Number(value) : "")
+                  }
+                  data={jerseyOptions}
+                  searchable
+                  clearable
+                />
+              )}
+            </>
           )}
 
           {form.assignmentMode === "manual" && (
             <>
               <Select
                 label="Team"
+                placeholder="Select a team"
                 value={form.team}
                 onChange={(value) => handleChange("team", value || "")}
-                data={teams.map((team) => ({
-                  value: team._id,
-                  label: `${team.name} (U${team.maxAge})`,
-                }))}
+                data={teamOptions}
                 searchable
                 clearable
               />
@@ -373,7 +495,32 @@ export default function PlayerForm({
                   {recommendedTeam && ` | Recommended: ${recommendedTeam.name}`}
                 </Text>
               )}
+
+              <Select
+                label="Kit Number"
+                placeholder={form.team ? "Select a kit number" : "Select a team first"}
+                value={
+                  form.jerseyNumber !== undefined &&
+                  form.jerseyNumber !== null &&
+                  form.jerseyNumber !== ""
+                    ? String(form.jerseyNumber)
+                    : null
+                }
+                onChange={(value) =>
+                  handleChange("jerseyNumber", value ? Number(value) : "")
+                }
+                data={jerseyOptions}
+                searchable
+                clearable
+                disabled={!form.team}
+              />
             </>
+          )}
+
+          {effectiveTeam && (
+            <Text size="sm" c="dimmed">
+              Available kit numbers are updated based on team {effectiveTeam.name}.
+            </Text>
           )}
 
           <Divider
