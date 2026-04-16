@@ -62,7 +62,7 @@ It provides a full-stack web solution that allows users to create, update, and m
 ├── LICENCE
 ├── Caddyfile
 ├── client/        # Frontend (React)
-├── server/        # Backend (Express)
+├── backend/        # Backend (Express)
 └── README.md
 
 ```
@@ -134,7 +134,7 @@ and served as static files.
 ## 8. Validation Rules
 
 - Guardian must provide at least one contact (email or phone)  
-- Jersey numbers must be unique within a team  
+- Kit numbers must be unique within a team  
 - Players are assigned to teams based on age  
 - Coaches cannot be assigned to teams with overlapping training days  
 
