@@ -62,7 +62,7 @@ It provides a full-stack web solution that allows users to create, update, and m
 ├── LICENCE
 ├── Caddyfile
 ├── client/        # Frontend (React)
-├── backend/        # Backend (Express)
+├── server/        # Backend (Express)
 └── README.md
 
 ```
