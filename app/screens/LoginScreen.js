@@ -1,6 +1,9 @@
 import { useState } from "react";
 import {
   SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   Text,
   TextInput,
   Button,
@@ -36,28 +39,45 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text>Username</Text>
-      <TextInput
-        style={styles.input}
-        value={username}
-        onChangeText={setUsername}
-      />
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoider}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 88 : 0}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text>Username</Text>
+          <TextInput
+            style={styles.input}
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+          />
 
-      <Text>Password</Text>
-      <TextInput
-        style={styles.input}
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+          <Text>Password</Text>
+          <TextInput
+            style={styles.input}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
 
-      <Button title="Login" onPress={handleLogin} />
+          <Button title="Login" onPress={handleLogin} />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
+  container: { flex: 1 },
+  keyboardAvoider: { flex: 1 },
+  content: {
+    padding: 16,
+    paddingBottom: 220,
+  },
   input: {
     borderWidth: 1,
     marginBottom: 12,

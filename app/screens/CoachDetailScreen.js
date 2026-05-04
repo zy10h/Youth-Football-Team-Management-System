@@ -1,0 +1,221 @@
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Button,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { deleteCoach, getCoach } from "../services/coachService";
+import { getTeamsByCoach } from "../services/teamService";
+
+const getCoachName = (coach) =>
+  `${coach.firstName || ""} ${coach.lastName || ""}`.trim();
+
+export default function CoachDetailScreen({ navigation, route }) {
+  const coachId = route.params?.coachId;
+
+  const [coach, setCoach] = useState(null);
+  const [teams, setTeams] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadCoach = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const [coachData, teamData] = await Promise.all([
+        getCoach(coachId),
+        getTeamsByCoach(coachId),
+      ]);
+
+      setCoach(coachData);
+      setTeams(teamData.teams || teamData);
+    } catch (err) {
+      console.log("LOAD COACH ERROR:", err.response?.data || err.message);
+      setError(err.response?.data?.message || "Failed to load coach.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      loadCoach();
+    });
+
+    return unsubscribe;
+  }, [navigation, coachId]);
+
+  const handleDelete = () => {
+    Alert.alert("Delete Coach", "Delete this coach?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteCoach(coachId);
+            Alert.alert("Success", "Coach deleted");
+            navigation.navigate("CoachesList");
+          } catch (err) {
+            console.log("DELETE COACH ERROR:", err.response?.data || err);
+            Alert.alert(
+              "Error",
+              err.response?.data?.message || "Failed to delete coach."
+            );
+          }
+        },
+      },
+    ]);
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.center}>
+        <ActivityIndicator size="large" />
+        <Text>Loading coach...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !coach) {
+    return (
+      <SafeAreaView style={styles.center}>
+        <Text style={styles.error}>{error || "Coach not found."}</Text>
+        <Text style={styles.retry} onPress={loadCoach}>
+          Retry
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.headerRow}>
+          <View style={styles.headerText}>
+            <Text style={styles.title}>{getCoachName(coach)}</Text>
+            <Text style={styles.subtitle}>Coach Details</Text>
+          </View>
+
+          <View style={styles.headerButtons}>
+            <Button
+              title="Edit"
+              onPress={() => navigation.navigate("CoachForm", { coachId })}
+            />
+            <Button title="Delete" color="red" onPress={handleDelete} />
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Basic Info</Text>
+          <Text style={styles.infoText}>Email: {coach.email || "N/A"}</Text>
+          <Text style={styles.infoText}>Phone: {coach.phone || "N/A"}</Text>
+
+          <Text style={styles.sectionTitle}>Assigned Teams</Text>
+
+          {teams.length === 0 ? (
+            <Text style={styles.muted}>
+              This coach is not assigned to any team.
+            </Text>
+          ) : (
+            teams.map((team) => (
+              <View key={team._id || team.id} style={styles.teamRow}>
+                <Text style={styles.badge}>{team.name}</Text>
+                <Text style={styles.teamDays}>
+                  ({team.trainingDays?.join(", ") || "No training days"})
+                </Text>
+              </View>
+            ))
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  content: {
+    padding: 16,
+    paddingBottom: 90,
+  },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  headerRow: {
+    marginBottom: 12,
+  },
+  headerText: {
+    marginBottom: 10,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+  },
+  subtitle: {
+    color: "#666",
+    marginTop: 2,
+  },
+  headerButtons: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  card: {
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  infoText: {
+    marginBottom: 8,
+  },
+  muted: {
+    color: "#666",
+  },
+  teamRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  badge: {
+    color: "#fff",
+    fontWeight: "bold",
+    backgroundColor: "#2196f3",
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginRight: 10,
+    overflow: "hidden",
+  },
+  teamDays: {
+    color: "#333",
+  },
+  error: {
+    color: "red",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  retry: {
+    color: "blue",
+    fontWeight: "bold",
+  },
+});

@@ -1,7 +1,7 @@
 import api from "./api";
 
-export async function getPlayers() {
-  const response = await api.get("/players");
+export async function getPlayers(params = {}) {
+  const response = await api.get("/players", { params });
   return response.data;
 }
 

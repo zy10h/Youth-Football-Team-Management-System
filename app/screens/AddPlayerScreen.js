@@ -1,18 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
   Button,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import * as Notifications from "expo-notifications";
 
 import { createPlayer } from "../services/playerService";
 
 export default function AddPlayerScreen({ navigation }) {
+  const scrollViewRef = useRef(null);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
@@ -77,31 +81,83 @@ export default function AddPlayerScreen({ navigation }) {
     }
   };
 
+  const scrollFocusedInputIntoView = (y) => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({
+        y,
+        animated: true,
+      });
+    }, 120);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Add Player</Text>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoider}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 88 : 0}
+      >
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.title}>Add Player</Text>
 
-      <Text>First Name *</Text>
-      <TextInput style={styles.input} value={firstName} onChangeText={setFirstName} />
+          <Text>First Name *</Text>
+          <TextInput
+            style={styles.input}
+            value={firstName}
+            onChangeText={setFirstName}
+          />
 
-      <Text>Last Name *</Text>
-      <TextInput style={styles.input} value={lastName} onChangeText={setLastName} />
+          <Text>Last Name *</Text>
+          <TextInput
+            style={styles.input}
+            value={lastName}
+            onChangeText={setLastName}
+          />
 
-      <Text>Date of Birth (YYYY-MM-DD) *</Text>
-      <TextInput style={styles.input} value={dateOfBirth} onChangeText={setDateOfBirth} />
+          <Text>Date of Birth (YYYY-MM-DD) *</Text>
+          <TextInput
+            style={styles.input}
+            value={dateOfBirth}
+            onChangeText={setDateOfBirth}
+            onFocus={() => scrollFocusedInputIntoView(80)}
+          />
 
-      <Text>Guardian Name *</Text>
-      <TextInput style={styles.input} value={guardianName} onChangeText={setGuardianName} />
+          <Text>Guardian Name *</Text>
+          <TextInput
+            style={styles.input}
+            value={guardianName}
+            onChangeText={setGuardianName}
+            onFocus={() => scrollFocusedInputIntoView(150)}
+          />
 
-      <Text>Guardian Phone</Text>
-      <TextInput style={styles.input} value={guardianPhone} onChangeText={setGuardianPhone} />
+          <Text>Guardian Phone</Text>
+          <TextInput
+            style={styles.input}
+            value={guardianPhone}
+            onChangeText={setGuardianPhone}
+            keyboardType="phone-pad"
+            onFocus={() => scrollFocusedInputIntoView(230)}
+          />
 
-      <Text>Email</Text>
-      <TextInput style={styles.input} value={email} onChangeText={setEmail} />
+          <Text>Email</Text>
+          <TextInput
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            onFocus={() => scrollFocusedInputIntoView(310)}
+          />
 
-      <View style={{ marginTop: 20 }}>
-        <Button title="CREATE PLAYER" onPress={handleCreatePlayer} />
-      </View>
+          <View style={styles.buttonArea}>
+            <Button title="CREATE PLAYER" onPress={handleCreatePlayer} />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -109,7 +165,13 @@ export default function AddPlayerScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  keyboardAvoider: {
+    flex: 1,
+  },
+  content: {
     padding: 16,
+    paddingBottom: 280,
   },
   title: {
     fontSize: 20,
@@ -122,5 +184,8 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 12,
     borderRadius: 6,
+  },
+  buttonArea: {
+    marginTop: 20,
   },
 });

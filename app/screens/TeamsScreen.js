@@ -1,18 +1,26 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Button,
   FlatList,
   SafeAreaView,
   StyleSheet,
   Text,
+  TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { getTeams } from "../services/teamService";
 
-export default function TeamsScreen() {
+const getCoachName = (coach) =>
+  coach ? `${coach.firstName || ""} ${coach.lastName || ""}`.trim() : "";
+
+export default function TeamsScreen({ navigation }) {
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchText, setSearchText] = useState("");
+  const [sort, setSort] = useState("name_asc");
 
   const loadTeams = async () => {
     try {
@@ -20,8 +28,6 @@ export default function TeamsScreen() {
       setError("");
 
       const data = await getTeams();
-      console.log("TEAMS DATA:", data);
-
       setTeams(data.teams || data);
     } catch (err) {
       console.log("LOAD TEAMS ERROR:", err.response?.data || err.message);
@@ -32,8 +38,36 @@ export default function TeamsScreen() {
   };
 
   useEffect(() => {
-    loadTeams();
-  }, []);
+    const unsubscribe = navigation.addListener("focus", () => {
+      loadTeams();
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
+  const filteredTeams = useMemo(() => {
+    const keyword = searchText.trim().toLowerCase();
+
+    const list = teams.filter((team) => {
+      if (!keyword) return true;
+
+      const teamName = (team.name || team.teamName || "").toLowerCase();
+      const trainingDays = (team.trainingDays || []).join(" ").toLowerCase();
+      const coachName = getCoachName(team.coach).toLowerCase();
+
+      return (
+        teamName.includes(keyword) ||
+        trainingDays.includes(keyword) ||
+        coachName.includes(keyword)
+      );
+    });
+
+    return list.sort((a, b) => {
+      const aAge = Number(a.maxAge || a.ageGroup || 0);
+      const bAge = Number(b.maxAge || b.ageGroup || 0);
+      return sort === "name_asc" ? aAge - bAge : bAge - aAge;
+    });
+  }, [teams, searchText, sort]);
 
   if (loading) {
     return (
@@ -58,23 +92,74 @@ export default function TeamsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
-        data={teams}
+        data={filteredTeams}
         keyExtractor={(item) => item._id || item.id}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.name}>{item.name || item.teamName}</Text>
-            <Text>Age Group: {item.ageGroup || item.maxAge || "N/A"}</Text>
-            <Text>
-              Training Days:{" "}
-              {Array.isArray(item.trainingDays)
-                ? item.trainingDays.join(", ")
-                : item.trainingDays || "N/A"}
+        contentContainerStyle={styles.listContent}
+        ListHeaderComponent={
+          <View>
+            <Button
+              title="Add Team"
+              onPress={() => navigation.navigate("TeamForm")}
+            />
+
+            <TextInput
+              style={styles.searchInput}
+              value={searchText}
+              onChangeText={setSearchText}
+              placeholder="Search by team name, training day, or coach"
+            />
+
+            <TouchableOpacity
+              style={styles.sortButton}
+              onPress={() =>
+                setSort((current) =>
+                  current === "name_asc" ? "name_desc" : "name_asc"
+                )
+              }
+            >
+              <Text style={styles.sortTitle}>Team Name</Text>
+              <Text style={styles.sortValue}>
+                {sort === "name_asc" ? "U6 - U18" : "U18 - U6"}
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={styles.hint}>
+              {filteredTeams.length} team
+              {filteredTeams.length === 1 ? "" : "s"} shown. Tap a team to view
+              details.
             </Text>
           </View>
-        )}
-        ListEmptyComponent={
-          <Text style={styles.empty}>No teams found.</Text>
         }
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate("TeamDetail", { teamId: item._id || item.id })
+            }
+          >
+            <View style={styles.card}>
+              <Text style={styles.name}>{item.name || item.teamName}</Text>
+
+              <Text>Maximum Age: {item.maxAge || item.ageGroup || "N/A"}</Text>
+
+              <View style={styles.badgeRow}>
+                <Text>Training Days: </Text>
+                {item.trainingDays?.length ? (
+                  item.trainingDays.map((day) => (
+                    <Text key={day} style={styles.badge}>
+                      {day.toUpperCase()}
+                    </Text>
+                  ))
+                ) : (
+                  <Text>N/A</Text>
+                )}
+              </View>
+
+              <Text>Coach: {getCoachName(item.coach) || "Unassigned"}</Text>
+              <Text>Players: {item.players?.length || 0}</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+        ListEmptyComponent={<Text style={styles.empty}>No teams found.</Text>}
       />
     </SafeAreaView>
   );
@@ -83,13 +168,44 @@ export default function TeamsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  listContent: {
     padding: 12,
+    paddingBottom: 90,
   },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    padding: 10,
+    marginTop: 12,
+    marginBottom: 10,
+    borderRadius: 6,
+  },
+  sortButton: {
+    borderWidth: 1,
+    borderColor: "#cfd8dc",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 10,
+    backgroundColor: "#fff",
+  },
+  sortTitle: {
+    fontWeight: "bold",
+    marginBottom: 2,
+  },
+  sortValue: {
+    color: "#666",
+  },
+  hint: {
+    marginBottom: 8,
+    color: "#666",
+    fontSize: 13,
   },
   card: {
     padding: 14,
@@ -103,6 +219,23 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 4,
+  },
+  badgeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    marginVertical: 4,
+  },
+  badge: {
+    color: "#0d6ecf",
+    fontWeight: "bold",
+    backgroundColor: "#d7ecff",
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginRight: 6,
+    marginBottom: 4,
+    overflow: "hidden",
   },
   error: {
     color: "red",

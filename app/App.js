@@ -8,7 +8,11 @@ import PlayerDetailScreen from "./screens/PlayerDetailScreen";
 import AddPlayerScreen from "./screens/AddPlayerScreen";
 import ChangeTeamScreen from "./screens/ChangeTeamScreen";
 import TeamsScreen from "./screens/TeamsScreen";
+import TeamDetailScreen from "./screens/TeamDetailScreen";
+import TeamFormScreen from "./screens/TeamFormScreen";
 import CoachesScreen from "./screens/CoachesScreen";
+import CoachDetailScreen from "./screens/CoachDetailScreen";
+import CoachFormScreen from "./screens/CoachFormScreen";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -25,12 +29,77 @@ function PlayersStack() {
   );
 }
 
+function TeamsStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="TeamsList"
+        component={TeamsScreen}
+        options={{ title: "Teams" }}
+      />
+      <Stack.Screen
+        name="TeamDetail"
+        component={TeamDetailScreen}
+        options={{ title: "Team Detail" }}
+      />
+      <Stack.Screen
+        name="TeamForm"
+        component={TeamFormScreen}
+        options={({ route }) => ({
+          title: route.params?.teamId ? "Edit Team" : "Add Team",
+        })}
+      />
+      <Stack.Screen
+        name="TeamPlayerDetail"
+        component={PlayerDetailScreen}
+        options={{ title: "Player Detail" }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+function CoachesStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="CoachesList"
+        component={CoachesScreen}
+        options={{ title: "Coaches" }}
+      />
+      <Stack.Screen
+        name="CoachDetail"
+        component={CoachDetailScreen}
+        options={{ title: "Coach Detail" }}
+      />
+      <Stack.Screen
+        name="CoachForm"
+        component={CoachFormScreen}
+        options={({ route }) => ({
+          title: route.params?.coachId ? "Edit Coach" : "Add Coach",
+        })}
+      />
+    </Stack.Navigator>
+  );
+}
+
 function MainTabs() {
   return (
     <Tab.Navigator>
-      <Tab.Screen name="Players" component={PlayersStack} />
-      <Tab.Screen name="Teams" component={TeamsScreen} />
-      <Tab.Screen name="Coaches" component={CoachesScreen} />
+      <Tab.Screen
+        name="Players"
+        component={PlayersStack}
+        options={{ headerShown: false }}
+      />
+      <Tab.Screen
+        name="Teams"
+        component={TeamsStack}
+        options={{ headerShown: false }}
+      />
+      <Tab.Screen
+        name="Coaches"
+        component={CoachesStack}
+        options={{ headerShown: false }}
+      />
     </Tab.Navigator>
   );
 }
