@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Button,
   FlatList,
   SafeAreaView,
@@ -10,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { getCoaches } from "../services/coachService";
+import { deleteCoach, getCoaches } from "../services/coachService";
 import { getTeams } from "../services/teamService";
 
 const getCoachName = (coach) =>
@@ -81,6 +82,63 @@ export default function CoachesScreen({ navigation }) {
     return unsubscribe;
   }, [navigation]);
 
+  const handleDeleteCoach = (coach) => {
+    const coachId = coach._id || coach.id;
+    const coachName = getCoachName(coach) || "this coach";
+
+    Alert.alert(
+      "Delete Coach",
+      `Are you sure you want to delete ${coachName}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteCoach(coachId);
+              await loadCoaches();
+            } catch (err) {
+              console.log(
+                "DELETE COACH ERROR:",
+                err.response?.data || err.message
+              );
+              Alert.alert(
+                "Error",
+                err.response?.data?.message || "Failed to delete coach."
+              );
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const handleLongPressActions = (coach) => {
+    const coachId = coach._id || coach.id;
+
+    Alert.alert(
+      "Coach Actions",
+      getCoachName(coach) || "Coach",
+      [
+        {
+          text: "Edit",
+          onPress: () => navigation.navigate("CoachForm", { coachId }),
+        },
+        {
+          text: "Delete Coach",
+          style: "destructive",
+          onPress: () => handleDeleteCoach(coach),
+        },
+      ],
+      {
+        cancelable: true,
+        onDismiss: () => {},
+      }
+    );
+  };
+
   const filteredCoaches = useMemo(() => {
     const keyword = searchText.trim().toLowerCase();
 
@@ -92,11 +150,13 @@ export default function CoachesScreen({ navigation }) {
       const fullName = getCoachName(coach).toLowerCase();
       const email = (coach.email || "").toLowerCase();
       const phone = (coach.phone || "").toLowerCase();
+      const introduction = (coach.introduction || "").toLowerCase();
 
       return (
         fullName.includes(keyword) ||
         email.includes(keyword) ||
-        phone.includes(keyword)
+        phone.includes(keyword) ||
+        introduction.includes(keyword)
       );
     });
   }, [coaches, searchText]);
@@ -144,7 +204,7 @@ export default function CoachesScreen({ navigation }) {
             <Text style={styles.hint}>
               {filteredCoaches.length} coach
               {filteredCoaches.length === 1 ? "" : "es"} shown. Tap a coach to
-              view details.
+              view details. Long press for quick actions.
             </Text>
           </View>
         }
@@ -155,11 +215,13 @@ export default function CoachesScreen({ navigation }) {
                 coachId: item._id || item.id,
               })
             }
+            onLongPress={() => handleLongPressActions(item)}
           >
             <View style={styles.card}>
               <Text style={styles.name}>{getCoachName(item)}</Text>
               <Text>Email: {item.email || "N/A"}</Text>
               <Text>Phone: {item.phone || "N/A"}</Text>
+              <Text>Introduction: {item.introduction || "N/A"}</Text>
               <Text>
                 Assigned Teams:{" "}
                 {getAssignedTeamNames(item) || "None"}

@@ -205,23 +205,14 @@ export default function TeamDetailScreen({ navigation, route }) {
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <View>
-            <View style={styles.headerRow}>
-              <Text style={styles.title}>{team.name}</Text>
-              <View style={styles.headerButtons}>
-                <Button
-                  title="Edit"
-                  onPress={() =>
-                    navigation.navigate("TeamForm", {
-                      teamId: team._id || team.id,
-                    })
-                  }
-                />
-                <Button title="Delete" color="red" onPress={handleDelete} />
-              </View>
-            </View>
-
             <View style={styles.card}>
-              <Text style={styles.sectionLabel}>Team Info</Text>
+              <View style={styles.cardHeader}>
+                <View style={styles.headerText}>
+                  <Text style={styles.title}>{team.name}</Text>
+                  <Text style={styles.subtitle}>Team Info</Text>
+                </View>
+              </View>
+
               <Text style={styles.infoText}>Maximum Age: {team.maxAge}</Text>
 
               <View style={styles.badgeRow}>
@@ -240,6 +231,18 @@ export default function TeamDetailScreen({ navigation, route }) {
               <Text style={styles.infoText}>
                 Coach: {getCoachName(team.coach) || "Unassigned"}
               </Text>
+
+              <View style={styles.headerButtons}>
+                <Button
+                  title="Edit"
+                  onPress={() =>
+                    navigation.navigate("TeamForm", {
+                      teamId: team._id || team.id,
+                    })
+                  }
+                />
+                <Button title="Delete" color="red" onPress={handleDelete} />
+              </View>
             </View>
 
             <Text style={styles.playersTitle}>Players</Text>
@@ -422,17 +425,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 20,
   },
-  headerRow: {
-    marginBottom: 10,
-  },
-  headerButtons: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 10,
-  },
   title: {
     fontSize: 24,
     fontWeight: "bold",
+  },
+  subtitle: {
+    color: "#666",
+    marginTop: 2,
   },
   card: {
     padding: 14,
@@ -441,6 +440,23 @@ const styles = StyleSheet.create({
     borderColor: "#ddd",
     borderRadius: 8,
     backgroundColor: "#fff",
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 12,
+  },
+  headerText: {
+    flex: 1,
+  },
+  headerButtons: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 20,
   },
   sectionLabel: {
     fontWeight: "bold",

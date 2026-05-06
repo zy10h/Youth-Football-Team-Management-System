@@ -27,6 +27,7 @@ export default function CoachFormScreen({ navigation, route }) {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [introduction, setIntroduction] = useState("");
   const [loading, setLoading] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -44,6 +45,7 @@ export default function CoachFormScreen({ navigation, route }) {
         setLastName(coach.lastName || "");
         setEmail(coach.email || "");
         setPhone(coach.phone || "");
+        setIntroduction(coach.introduction || "");
       } catch (err) {
         console.log("LOAD COACH FORM ERROR:", err.response?.data || err);
         setError(err.response?.data?.message || "Failed to load coach.");
@@ -73,6 +75,7 @@ export default function CoachFormScreen({ navigation, route }) {
       lastName: lastName.trim(),
       email: email.trim(),
       phone: phone.trim(),
+      introduction: introduction.trim(),
     };
 
     try {
@@ -177,6 +180,18 @@ export default function CoachFormScreen({ navigation, route }) {
               onFocus={() => scrollFocusedInputIntoView(430)}
             />
 
+            <Text style={styles.section}>Introduction</Text>
+
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={introduction}
+              onChangeText={setIntroduction}
+              placeholder="Enter coach introduction"
+              multiline
+              textAlignVertical="top"
+              onFocus={() => scrollFocusedInputIntoView(530)}
+            />
+
             <View style={styles.buttonArea}>
               <Button
                 title={
@@ -254,6 +269,9 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 14,
     borderRadius: 6,
+  },
+  textArea: {
+    minHeight: 110,
   },
   errorBox: {
     color: "#b00020",

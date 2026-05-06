@@ -36,8 +36,10 @@ const getCoachName = (coach) =>
 
 export default function TeamFormScreen({ navigation, route }) {
   const teamId = route.params?.teamId;
+  const focusCoach = route.params?.focusCoach;
   const isEdit = Boolean(teamId);
   const scrollViewRef = useRef(null);
+  const focusedCoachRef = useRef(false);
 
   const [maxAge, setMaxAge] = useState("");
   const [trainingDays, setTrainingDays] = useState([]);
@@ -83,6 +85,16 @@ export default function TeamFormScreen({ navigation, route }) {
 
     loadFormData();
   }, [isEdit, teamId]);
+
+  useEffect(() => {
+    if (loading || !focusCoach || focusedCoachRef.current) {
+      return;
+    }
+
+    focusedCoachRef.current = true;
+    setShowCoachOptions(true);
+    scrollFocusedInputIntoView(260);
+  }, [focusCoach, loading]);
 
   const coachConflicts = useMemo(() => {
     const result = {};

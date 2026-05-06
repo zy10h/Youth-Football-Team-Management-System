@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Button,
   FlatList,
   SafeAreaView,
@@ -10,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { getTeams } from "../services/teamService";
+import { deleteTeam, getTeams } from "../services/teamService";
 
 const getCoachName = (coach) =>
   coach ? `${coach.firstName || ""} ${coach.lastName || ""}`.trim() : "";
@@ -44,6 +45,72 @@ export default function TeamsScreen({ navigation }) {
 
     return unsubscribe;
   }, [navigation]);
+
+  const handleDeleteTeam = (team) => {
+    const teamId = team._id || team.id;
+    const teamName = team.name || team.teamName || "this team";
+
+    Alert.alert(
+      "Delete Team",
+      `Are you sure you want to delete ${teamName}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteTeam(teamId);
+              await loadTeams();
+            } catch (err) {
+              console.log(
+                "DELETE TEAM ERROR:",
+                err.response?.data || err.message
+              );
+              Alert.alert(
+                "Error",
+                err.response?.data?.message || "Failed to delete team."
+              );
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const handleLongPressActions = (team) => {
+    const teamId = team._id || team.id;
+
+    Alert.alert(
+      "Team Actions",
+      team.name || team.teamName || "Team",
+      [
+        {
+          text: "Edit",
+          onPress: () => navigation.navigate("TeamForm", { teamId }),
+        },
+        {
+          text: "Assign Coach",
+          onPress: () =>
+            navigation.navigate("TeamForm", { teamId, focusCoach: true }),
+        },
+        {
+          text: "Delete Team",
+          style: "destructive",
+          onPress: () => handleDeleteTeam(team),
+        },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+      ],
+      {
+        cancelable: true,
+        onDismiss: () => {},
+      }
+    );
+  };
 
   const filteredTeams = useMemo(() => {
     const keyword = searchText.trim().toLowerCase();
@@ -126,7 +193,7 @@ export default function TeamsScreen({ navigation }) {
             <Text style={styles.hint}>
               {filteredTeams.length} team
               {filteredTeams.length === 1 ? "" : "s"} shown. Tap a team to view
-              details.
+              details. Long press for quick actions.
             </Text>
           </View>
         }
@@ -135,6 +202,7 @@ export default function TeamsScreen({ navigation }) {
             onPress={() =>
               navigation.navigate("TeamDetail", { teamId: item._id || item.id })
             }
+            onLongPress={() => handleLongPressActions(item)}
           >
             <View style={styles.card}>
               <Text style={styles.name}>{item.name || item.teamName}</Text>

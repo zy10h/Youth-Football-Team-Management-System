@@ -193,7 +193,11 @@ export default function PlayersScreen({ navigation }) {
           text: "Cancel",
           style: "cancel",
         },
-      ]
+      ],
+      {
+        cancelable: true,
+        onDismiss: () => {},
+      }
     );
   };
 

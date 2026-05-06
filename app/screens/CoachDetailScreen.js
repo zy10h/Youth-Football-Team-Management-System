@@ -5,8 +5,10 @@ import {
   Button,
   SafeAreaView,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { deleteCoach, getCoach } from "../services/coachService";
@@ -14,6 +16,31 @@ import { getTeamsByCoach } from "../services/teamService";
 
 const getCoachName = (coach) =>
   `${coach.firstName || ""} ${coach.lastName || ""}`.trim();
+
+function buildCoachShareMessage(coach, teams) {
+  const assignedTeams =
+    teams.length === 0
+      ? "None"
+      : teams
+          .map(
+            (team) =>
+              `${team.name || "Unnamed team"} (${
+                team.trainingDays?.join(", ") || "No training days"
+              })`
+          )
+          .join("\n");
+
+  return [
+    `Coach Summary: ${getCoachName(coach) || "N/A"}`,
+    "",
+    `Email: ${coach.email || "N/A"}`,
+    `Phone: ${coach.phone || "N/A"}`,
+    `Introduction: ${coach.introduction || "N/A"}`,
+    "",
+    "Assigned Teams",
+    assignedTeams,
+  ].join("\n");
+}
 
 export default function CoachDetailScreen({ navigation, route }) {
   const coachId = route.params?.coachId;
@@ -74,6 +101,18 @@ export default function CoachDetailScreen({ navigation, route }) {
     ]);
   };
 
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        title: getCoachName(coach) || "Coach Details",
+        message: buildCoachShareMessage(coach, teams),
+      });
+    } catch (err) {
+      console.log("SHARE COACH ERROR:", err.message);
+      Alert.alert("Error", "Failed to share coach details.");
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.center}>
@@ -97,25 +136,24 @@ export default function CoachDetailScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.headerRow}>
-          <View style={styles.headerText}>
-            <Text style={styles.title}>{getCoachName(coach)}</Text>
-            <Text style={styles.subtitle}>Coach Details</Text>
-          </View>
-
-          <View style={styles.headerButtons}>
-            <Button
-              title="Edit"
-              onPress={() => navigation.navigate("CoachForm", { coachId })}
-            />
-            <Button title="Delete" color="red" onPress={handleDelete} />
-          </View>
-        </View>
-
         <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.headerText}>
+              <Text style={styles.title}>{getCoachName(coach)}</Text>
+              <Text style={styles.subtitle}>Coach Details</Text>
+            </View>
+
+            <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+              <Text style={styles.shareButtonText}>SHARE</Text>
+            </TouchableOpacity>
+          </View>
+
           <Text style={styles.sectionTitle}>Basic Info</Text>
           <Text style={styles.infoText}>Email: {coach.email || "N/A"}</Text>
           <Text style={styles.infoText}>Phone: {coach.phone || "N/A"}</Text>
+          <Text style={styles.infoText}>
+            Introduction: {coach.introduction || "N/A"}
+          </Text>
 
           <Text style={styles.sectionTitle}>Assigned Teams</Text>
 
@@ -133,6 +171,14 @@ export default function CoachDetailScreen({ navigation, route }) {
               </View>
             ))
           )}
+
+          <View style={styles.headerButtons}>
+            <Button
+              title="Edit"
+              onPress={() => navigation.navigate("CoachForm", { coachId })}
+            />
+            <Button title="Delete" color="red" onPress={handleDelete} />
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -153,11 +199,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 20,
   },
-  headerRow: {
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
     marginBottom: 12,
   },
   headerText: {
-    marginBottom: 10,
+    flex: 1,
   },
   title: {
     fontSize: 24,
@@ -169,7 +219,20 @@ const styles = StyleSheet.create({
   },
   headerButtons: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
     gap: 10,
+    marginTop: 20,
+  },
+  shareButton: {
+    backgroundColor: "#2e7d32",
+    borderRadius: 4,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  shareButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
   card: {
     padding: 16,
