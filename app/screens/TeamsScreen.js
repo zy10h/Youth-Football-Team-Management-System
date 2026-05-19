@@ -11,12 +11,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSettings } from "../context/SettingsContext";
 import { deleteTeam, getTeams } from "../services/teamService";
 
 const getCoachName = (coach) =>
   coach ? `${coach.firstName || ""} ${coach.lastName || ""}`.trim() : "";
 
 export default function TeamsScreen({ navigation }) {
+  const { textStyles } = useSettings();
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -140,7 +142,7 @@ export default function TeamsScreen({ navigation }) {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" />
-        <Text>Loading teams...</Text>
+        <Text style={textStyles.body}>Loading teams...</Text>
       </SafeAreaView>
     );
   }
@@ -148,8 +150,8 @@ export default function TeamsScreen({ navigation }) {
   if (error) {
     return (
       <SafeAreaView style={styles.center}>
-        <Text style={styles.error}>{error}</Text>
-        <Text style={styles.retry} onPress={loadTeams}>
+        <Text style={[styles.error, textStyles.body]}>{error}</Text>
+        <Text style={[styles.retry, textStyles.body]} onPress={loadTeams}>
           Retry
         </Text>
       </SafeAreaView>
@@ -170,7 +172,7 @@ export default function TeamsScreen({ navigation }) {
             />
 
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, textStyles.input]}
               value={searchText}
               onChangeText={setSearchText}
               placeholder="Search by team name, training day, or coach"
@@ -184,13 +186,13 @@ export default function TeamsScreen({ navigation }) {
                 )
               }
             >
-              <Text style={styles.sortTitle}>Team Name</Text>
-              <Text style={styles.sortValue}>
+              <Text style={[styles.sortTitle, textStyles.body]}>Team Name</Text>
+              <Text style={[styles.sortValue, textStyles.body]}>
                 {sort === "name_asc" ? "U6 - U18" : "U18 - U6"}
               </Text>
             </TouchableOpacity>
 
-            <Text style={styles.hint}>
+            <Text style={[styles.hint, textStyles.small]}>
               {filteredTeams.length} team
               {filteredTeams.length === 1 ? "" : "s"} shown. Tap a team to view
               details. Long press for quick actions.
@@ -205,29 +207,39 @@ export default function TeamsScreen({ navigation }) {
             onLongPress={() => handleLongPressActions(item)}
           >
             <View style={styles.card}>
-              <Text style={styles.name}>{item.name || item.teamName}</Text>
+              <Text style={[styles.name, textStyles.cardTitle]}>
+                {item.name || item.teamName}
+              </Text>
 
-              <Text>Maximum Age: {item.maxAge || item.ageGroup || "N/A"}</Text>
+              <Text style={textStyles.body}>
+                Maximum Age: {item.maxAge || item.ageGroup || "N/A"}
+              </Text>
 
               <View style={styles.badgeRow}>
-                <Text>Training Days: </Text>
+                <Text style={textStyles.body}>Training Days: </Text>
                 {item.trainingDays?.length ? (
                   item.trainingDays.map((day) => (
-                    <Text key={day} style={styles.badge}>
+                    <Text key={day} style={[styles.badge, textStyles.small]}>
                       {day.toUpperCase()}
                     </Text>
                   ))
                 ) : (
-                  <Text>N/A</Text>
+                  <Text style={textStyles.body}>N/A</Text>
                 )}
               </View>
 
-              <Text>Coach: {getCoachName(item.coach) || "Unassigned"}</Text>
-              <Text>Players: {item.players?.length || 0}</Text>
+              <Text style={textStyles.body}>
+                Coach: {getCoachName(item.coach) || "Unassigned"}
+              </Text>
+              <Text style={textStyles.body}>
+                Players: {item.players?.length || 0}
+              </Text>
             </View>
           </TouchableOpacity>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>No teams found.</Text>}
+        ListEmptyComponent={
+          <Text style={[styles.empty, textStyles.body]}>No teams found.</Text>
+        }
       />
     </SafeAreaView>
   );

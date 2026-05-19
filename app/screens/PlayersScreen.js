@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSettings } from "../context/SettingsContext";
 import { getPlayers, deletePlayer } from "../services/playerService";
 
 const positionOptions = [
@@ -82,6 +83,7 @@ function DropdownSection({ title, value, isOpen, onToggle, children }) {
 }
 
 export default function PlayersScreen({ navigation }) {
+  const { textStyles } = useSettings();
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -421,7 +423,7 @@ export default function PlayersScreen({ navigation }) {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" />
-        <Text>Loading players...</Text>
+        <Text style={textStyles.body}>Loading players...</Text>
       </SafeAreaView>
     );
   }
@@ -429,8 +431,8 @@ export default function PlayersScreen({ navigation }) {
   if (error) {
     return (
       <SafeAreaView style={styles.center}>
-        <Text style={styles.error}>{error}</Text>
-        <Text style={styles.retry} onPress={loadPlayers}>
+        <Text style={[styles.error, textStyles.body]}>{error}</Text>
+        <Text style={[styles.retry, textStyles.body]} onPress={loadPlayers}>
           Retry
         </Text>
       </SafeAreaView>
@@ -452,7 +454,7 @@ export default function PlayersScreen({ navigation }) {
             />
 
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, textStyles.input]}
               value={searchText}
               onChangeText={setSearchText}
               placeholder="Search by name, team, or position"
@@ -660,7 +662,7 @@ export default function PlayersScreen({ navigation }) {
               </DropdownSection>
             </View>
 
-            <Text style={styles.hint}>
+            <Text style={[styles.hint, textStyles.small]}>
               Showing {firstShown}-{lastShown} of {filteredPlayers.length}{" "}
               players. Tap to view details. Long press for quick actions.
             </Text>
@@ -674,15 +676,17 @@ export default function PlayersScreen({ navigation }) {
             onLongPress={() => handleLongPressActions(item)}
           >
             <View style={styles.card}>
-              <Text style={styles.name}>
+              <Text style={[styles.name, textStyles.cardTitle]}>
                 {item.firstName} {item.lastName}
               </Text>
-              <Text>Age: {item.age || "N/A"}</Text>
-              <Text>
+              <Text style={textStyles.body}>Age: {item.age || "N/A"}</Text>
+              <Text style={textStyles.body}>
                 Team: {item.team?.name || item.teamName || "No team"}
               </Text>
-              <Text>Preferred Position: {item.preferredPosition || "N/A"}</Text>
-              <Text>
+              <Text style={textStyles.body}>
+                Preferred Position: {item.preferredPosition || "N/A"}
+              </Text>
+              <Text style={textStyles.body}>
                 Alternative Positions:{" "}
                 {item.alternativePositions?.length
                   ? item.alternativePositions.join(", ")
@@ -692,7 +696,7 @@ export default function PlayersScreen({ navigation }) {
           </TouchableOpacity>
         )}
         ListEmptyComponent={
-          <Text style={styles.empty}>No players found.</Text>
+          <Text style={[styles.empty, textStyles.body]}>No players found.</Text>
         }
         ListFooterComponent={
           <View>
@@ -708,6 +712,7 @@ export default function PlayersScreen({ navigation }) {
                 <Text
                   style={[
                     styles.pageButtonText,
+                    textStyles.body,
                     currentPage === 1 && styles.pageButtonTextDisabled,
                   ]}
                 >
@@ -719,7 +724,7 @@ export default function PlayersScreen({ navigation }) {
                 style={styles.pageSelector}
                 onPress={openPagePicker}
               >
-                <Text style={styles.pageText}>
+                <Text style={[styles.pageText, textStyles.body]}>
                   Page {currentPage} of {totalPages}
                 </Text>
               </TouchableOpacity>
@@ -737,6 +742,7 @@ export default function PlayersScreen({ navigation }) {
                 <Text
                   style={[
                     styles.pageButtonText,
+                    textStyles.body,
                     currentPage === totalPages &&
                       styles.pageButtonTextDisabled,
                   ]}
@@ -748,7 +754,7 @@ export default function PlayersScreen({ navigation }) {
 
             {showPagePicker && (
               <View style={styles.pagePicker}>
-                <Text style={styles.label}>Choose page</Text>
+                <Text style={[styles.label, textStyles.body]}>Choose page</Text>
                 <View style={styles.pageNumberGrid}>
                   {Array.from({ length: totalPages }, (_, index) => {
                     const pageNumber = index + 1;

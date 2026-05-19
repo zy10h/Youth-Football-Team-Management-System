@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSettings } from "../context/SettingsContext";
 import { deleteCoach, getCoaches } from "../services/coachService";
 import { getTeams } from "../services/teamService";
 
@@ -26,6 +27,7 @@ const getAssignedTeamNames = (coach) =>
     .join(", ");
 
 export default function CoachesScreen({ navigation }) {
+  const { textStyles } = useSettings();
   const [coaches, setCoaches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -165,7 +167,7 @@ export default function CoachesScreen({ navigation }) {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" />
-        <Text>Loading coaches...</Text>
+        <Text style={textStyles.body}>Loading coaches...</Text>
       </SafeAreaView>
     );
   }
@@ -173,8 +175,8 @@ export default function CoachesScreen({ navigation }) {
   if (error) {
     return (
       <SafeAreaView style={styles.center}>
-        <Text style={styles.error}>{error}</Text>
-        <Text style={styles.retry} onPress={loadCoaches}>
+        <Text style={[styles.error, textStyles.body]}>{error}</Text>
+        <Text style={[styles.retry, textStyles.body]} onPress={loadCoaches}>
           Retry
         </Text>
       </SafeAreaView>
@@ -195,13 +197,13 @@ export default function CoachesScreen({ navigation }) {
             />
 
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, textStyles.input]}
               value={searchText}
               onChangeText={setSearchText}
               placeholder="Search by name, email, or phone"
             />
 
-            <Text style={styles.hint}>
+            <Text style={[styles.hint, textStyles.small]}>
               {filteredCoaches.length} coach
               {filteredCoaches.length === 1 ? "" : "es"} shown. Tap a coach to
               view details. Long press for quick actions.
@@ -218,18 +220,24 @@ export default function CoachesScreen({ navigation }) {
             onLongPress={() => handleLongPressActions(item)}
           >
             <View style={styles.card}>
-              <Text style={styles.name}>{getCoachName(item)}</Text>
-              <Text>Email: {item.email || "N/A"}</Text>
-              <Text>Phone: {item.phone || "N/A"}</Text>
-              <Text>Introduction: {item.introduction || "N/A"}</Text>
-              <Text>
+              <Text style={[styles.name, textStyles.cardTitle]}>
+                {getCoachName(item)}
+              </Text>
+              <Text style={textStyles.body}>Email: {item.email || "N/A"}</Text>
+              <Text style={textStyles.body}>Phone: {item.phone || "N/A"}</Text>
+              <Text style={textStyles.body}>
+                Introduction: {item.introduction || "N/A"}
+              </Text>
+              <Text style={textStyles.body}>
                 Assigned Teams:{" "}
                 {getAssignedTeamNames(item) || "None"}
               </Text>
             </View>
           </TouchableOpacity>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>No coaches found.</Text>}
+        ListEmptyComponent={
+          <Text style={[styles.empty, textStyles.body]}>No coaches found.</Text>
+        }
       />
     </SafeAreaView>
   );

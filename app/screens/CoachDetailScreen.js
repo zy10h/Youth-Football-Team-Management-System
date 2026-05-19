@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSettings } from "../context/SettingsContext";
 import { deleteCoach, getCoach } from "../services/coachService";
 import { getTeamsByCoach } from "../services/teamService";
 
@@ -43,6 +44,7 @@ function buildCoachShareMessage(coach, teams) {
 }
 
 export default function CoachDetailScreen({ navigation, route }) {
+  const { textStyles } = useSettings();
   const coachId = route.params?.coachId;
 
   const [coach, setCoach] = useState(null);
@@ -117,7 +119,7 @@ export default function CoachDetailScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" />
-        <Text>Loading coach...</Text>
+        <Text style={textStyles.body}>Loading coach...</Text>
       </SafeAreaView>
     );
   }
@@ -125,8 +127,10 @@ export default function CoachDetailScreen({ navigation, route }) {
   if (error || !coach) {
     return (
       <SafeAreaView style={styles.center}>
-        <Text style={styles.error}>{error || "Coach not found."}</Text>
-        <Text style={styles.retry} onPress={loadCoach}>
+        <Text style={[styles.error, textStyles.body]}>
+          {error || "Coach not found."}
+        </Text>
+        <Text style={[styles.retry, textStyles.body]} onPress={loadCoach}>
           Retry
         </Text>
       </SafeAreaView>
@@ -139,8 +143,12 @@ export default function CoachDetailScreen({ navigation, route }) {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.headerText}>
-              <Text style={styles.title}>{getCoachName(coach)}</Text>
-              <Text style={styles.subtitle}>Coach Details</Text>
+              <Text style={[styles.title, textStyles.title]}>
+                {getCoachName(coach)}
+              </Text>
+              <Text style={[styles.subtitle, textStyles.body]}>
+                Coach Details
+              </Text>
             </View>
 
             <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
@@ -148,24 +156,32 @@ export default function CoachDetailScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.sectionTitle}>Basic Info</Text>
-          <Text style={styles.infoText}>Email: {coach.email || "N/A"}</Text>
-          <Text style={styles.infoText}>Phone: {coach.phone || "N/A"}</Text>
-          <Text style={styles.infoText}>
+          <Text style={[styles.sectionTitle, textStyles.sectionTitle]}>
+            Basic Info
+          </Text>
+          <Text style={[styles.infoText, textStyles.body]}>
+            Email: {coach.email || "N/A"}
+          </Text>
+          <Text style={[styles.infoText, textStyles.body]}>
+            Phone: {coach.phone || "N/A"}
+          </Text>
+          <Text style={[styles.infoText, textStyles.body]}>
             Introduction: {coach.introduction || "N/A"}
           </Text>
 
-          <Text style={styles.sectionTitle}>Assigned Teams</Text>
+          <Text style={[styles.sectionTitle, textStyles.sectionTitle]}>
+            Assigned Teams
+          </Text>
 
           {teams.length === 0 ? (
-            <Text style={styles.muted}>
+            <Text style={[styles.muted, textStyles.body]}>
               This coach is not assigned to any team.
             </Text>
           ) : (
             teams.map((team) => (
               <View key={team._id || team.id} style={styles.teamRow}>
-                <Text style={styles.badge}>{team.name}</Text>
-                <Text style={styles.teamDays}>
+                <Text style={[styles.badge, textStyles.small]}>{team.name}</Text>
+                <Text style={[styles.teamDays, textStyles.body]}>
                   ({team.trainingDays?.join(", ") || "No training days"})
                 </Text>
               </View>

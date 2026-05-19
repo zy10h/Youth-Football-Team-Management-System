@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSettings } from "../context/SettingsContext";
 import { deleteTeam, getTeam } from "../services/teamService";
 
 const positionOrder = {
@@ -46,6 +47,7 @@ const compareNames = (a, b) =>
   getPlayerName(a).localeCompare(getPlayerName(b));
 
 export default function TeamDetailScreen({ navigation, route }) {
+  const { textStyles } = useSettings();
   const teamId = route.params?.teamId;
 
   const [team, setTeam] = useState(null);
@@ -181,7 +183,7 @@ export default function TeamDetailScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" />
-        <Text>Loading team...</Text>
+        <Text style={textStyles.body}>Loading team...</Text>
       </SafeAreaView>
     );
   }
@@ -189,8 +191,10 @@ export default function TeamDetailScreen({ navigation, route }) {
   if (error || !team) {
     return (
       <SafeAreaView style={styles.center}>
-        <Text style={styles.error}>{error || "Team not found."}</Text>
-        <Text style={styles.retry} onPress={loadTeam}>
+        <Text style={[styles.error, textStyles.body]}>
+          {error || "Team not found."}
+        </Text>
+        <Text style={[styles.retry, textStyles.body]} onPress={loadTeam}>
           Retry
         </Text>
       </SafeAreaView>
@@ -208,27 +212,35 @@ export default function TeamDetailScreen({ navigation, route }) {
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={styles.headerText}>
-                  <Text style={styles.title}>{team.name}</Text>
-                  <Text style={styles.subtitle}>Team Info</Text>
+                  <Text style={[styles.title, textStyles.title]}>
+                    {team.name}
+                  </Text>
+                  <Text style={[styles.subtitle, textStyles.body]}>
+                    Team Info
+                  </Text>
                 </View>
               </View>
 
-              <Text style={styles.infoText}>Maximum Age: {team.maxAge}</Text>
+              <Text style={[styles.infoText, textStyles.body]}>
+                Maximum Age: {team.maxAge}
+              </Text>
 
               <View style={styles.badgeRow}>
-                <Text style={styles.infoText}>Training Day(s): </Text>
+                <Text style={[styles.infoText, textStyles.body]}>
+                  Training Day(s):{" "}
+                </Text>
                 {team.trainingDays?.length ? (
                   team.trainingDays.map((day) => (
-                    <Text key={day} style={styles.badge}>
+                    <Text key={day} style={[styles.badge, textStyles.small]}>
                       {day.toUpperCase()}
                     </Text>
                   ))
                 ) : (
-                  <Text>None</Text>
+                  <Text style={textStyles.body}>None</Text>
                 )}
               </View>
 
-              <Text style={styles.infoText}>
+              <Text style={[styles.infoText, textStyles.body]}>
                 Coach: {getCoachName(team.coach) || "Unassigned"}
               </Text>
 
@@ -245,15 +257,19 @@ export default function TeamDetailScreen({ navigation, route }) {
               </View>
             </View>
 
-            <Text style={styles.playersTitle}>Players</Text>
+            <Text style={[styles.playersTitle, textStyles.title]}>Players</Text>
 
             <TouchableOpacity
               style={styles.sortButton}
               onPress={() => setShowSortOptions((current) => !current)}
             >
               <View>
-                <Text style={styles.sortTitle}>Sort Players</Text>
-                <Text style={styles.sortValue}>{selectedSortLabel}</Text>
+                <Text style={[styles.sortTitle, textStyles.body]}>
+                  Sort Players
+                </Text>
+                <Text style={[styles.sortValue, textStyles.body]}>
+                  {selectedSortLabel}
+                </Text>
               </View>
               <Text style={styles.dropdownArrow}>
                 {showSortOptions ? "^" : "v"}
@@ -271,11 +287,12 @@ export default function TeamDetailScreen({ navigation, route }) {
                       setShowSortOptions(false);
                     }}
                   >
-                    <Text
-                      style={[
-                        styles.optionText,
-                        sort === option.value && styles.optionSelected,
-                      ]}
+                      <Text
+                        style={[
+                          styles.optionText,
+                          textStyles.body,
+                          sort === option.value && styles.optionSelected,
+                        ]}
                     >
                       {option.label}
                     </Text>
@@ -284,7 +301,7 @@ export default function TeamDetailScreen({ navigation, route }) {
               </View>
             )}
 
-            <Text style={styles.hint}>
+            <Text style={[styles.hint, textStyles.small]}>
               {sortedPlayers.length === 0
                 ? "No players registered in this team."
                 : `Showing ${startIndex + 1}-${Math.min(
@@ -301,18 +318,22 @@ export default function TeamDetailScreen({ navigation, route }) {
             }
           >
             <View style={styles.playerCard}>
-              <Text style={styles.playerName}>
+              <Text style={[styles.playerName, textStyles.cardTitle]}>
                 {item.firstName} {item.lastName}
               </Text>
-              <Text>Age: {item.age ?? "-"}</Text>
-              <Text>Preferred Position: {item.preferredPosition || "-"}</Text>
-              <Text>
+              <Text style={textStyles.body}>Age: {item.age ?? "-"}</Text>
+              <Text style={textStyles.body}>
+                Preferred Position: {item.preferredPosition || "-"}
+              </Text>
+              <Text style={textStyles.body}>
                 Alternative Positions:{" "}
                 {item.alternativePositions?.length
                   ? item.alternativePositions.join(", ")
                   : "None"}
               </Text>
-              <Text>Kit Number: {item.jerseyNumber ?? "-"}</Text>
+              <Text style={textStyles.body}>
+                Kit Number: {item.jerseyNumber ?? "-"}
+              </Text>
             </View>
           </TouchableOpacity>
         )}
@@ -331,6 +352,7 @@ export default function TeamDetailScreen({ navigation, route }) {
                   <Text
                     style={[
                       styles.pageButtonText,
+                      textStyles.body,
                       currentPage === 1 && styles.pageButtonTextDisabled,
                     ]}
                   >
@@ -342,7 +364,7 @@ export default function TeamDetailScreen({ navigation, route }) {
                   style={styles.pageSelector}
                   onPress={() => setShowPagePicker((current) => !current)}
                 >
-                  <Text style={styles.pageText}>
+                  <Text style={[styles.pageText, textStyles.body]}>
                     Page {currentPage} of {totalPages}
                   </Text>
                 </TouchableOpacity>
@@ -360,6 +382,7 @@ export default function TeamDetailScreen({ navigation, route }) {
                   <Text
                     style={[
                       styles.pageButtonText,
+                      textStyles.body,
                       currentPage === totalPages &&
                         styles.pageButtonTextDisabled,
                     ]}
@@ -371,7 +394,9 @@ export default function TeamDetailScreen({ navigation, route }) {
 
               {showPagePicker && (
                 <View style={styles.pagePicker}>
-                  <Text style={styles.sectionLabel}>Choose page</Text>
+                  <Text style={[styles.sectionLabel, textStyles.body]}>
+                    Choose page
+                  </Text>
                   <View style={styles.pageNumberGrid}>
                     {Array.from({ length: totalPages }, (_, index) => {
                       const pageNumber = index + 1;
@@ -392,6 +417,7 @@ export default function TeamDetailScreen({ navigation, route }) {
                           <Text
                             style={[
                               styles.pageNumberText,
+                              textStyles.body,
                               selected && styles.pageNumberTextSelected,
                             ]}
                           >

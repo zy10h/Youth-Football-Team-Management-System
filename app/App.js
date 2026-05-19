@@ -15,6 +15,8 @@ import TeamFormScreen from "./screens/TeamFormScreen";
 import CoachesScreen from "./screens/CoachesScreen";
 import CoachDetailScreen from "./screens/CoachDetailScreen";
 import CoachFormScreen from "./screens/CoachFormScreen";
+import SettingsScreen from "./screens/SettingsScreen";
+import { SettingsProvider } from "./context/SettingsContext";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -65,6 +67,20 @@ function CoachesTabIcon({ color }) {
   );
 }
 
+function SettingsTabIcon({ color }) {
+  return (
+    <View style={styles.settingsIcon}>
+      <View style={[styles.settingsOuter, { borderColor: color }]}>
+        <View style={[styles.settingsInner, { backgroundColor: color }]} />
+      </View>
+      <View style={[styles.settingsTickTop, { backgroundColor: color }]} />
+      <View style={[styles.settingsTickRight, { backgroundColor: color }]} />
+      <View style={[styles.settingsTickBottom, { backgroundColor: color }]} />
+      <View style={[styles.settingsTickLeft, { backgroundColor: color }]} />
+    </View>
+  );
+}
+
 function getTabIcon(routeName, color) {
   if (routeName === "Players") {
     return <PlayersTabIcon color={color} />;
@@ -74,7 +90,11 @@ function getTabIcon(routeName, color) {
     return <TeamsTabIcon color={color} />;
   }
 
-  return <CoachesTabIcon color={color} />;
+  if (routeName === "Coaches") {
+    return <CoachesTabIcon color={color} />;
+  }
+
+  return <SettingsTabIcon color={color} />;
 }
 
 function PlayersStack() {
@@ -175,22 +195,29 @@ function MainTabs() {
         component={CoachesStack}
         options={{ headerShown: false }}
       />
+      <Tab.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ headerShown: false }}
+      />
     </Tab.Navigator>
   );
 }
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <RootStack.Navigator>
-        <RootStack.Screen name="Login" component={LoginScreen} />
-        <RootStack.Screen
-          name="Main"
-          component={MainTabs}
-          options={{ headerShown: false }}
-        />
-      </RootStack.Navigator>
-    </NavigationContainer>
+    <SettingsProvider>
+      <NavigationContainer>
+        <RootStack.Navigator>
+          <RootStack.Screen name="Login" component={LoginScreen} />
+          <RootStack.Screen
+            name="Main"
+            component={MainTabs}
+            options={{ headerShown: false }}
+          />
+        </RootStack.Navigator>
+      </NavigationContainer>
+    </SettingsProvider>
   );
 }
 
@@ -288,5 +315,52 @@ const styles = StyleSheet.create({
     width: 8,
     height: 2,
     borderRadius: 1,
+  },
+  settingsIcon: {
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  settingsOuter: {
+    width: 17,
+    height: 17,
+    borderWidth: 2,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  settingsInner: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+  },
+  settingsTickTop: {
+    position: "absolute",
+    top: 0,
+    width: 3,
+    height: 5,
+    borderRadius: 2,
+  },
+  settingsTickRight: {
+    position: "absolute",
+    right: 0,
+    width: 5,
+    height: 3,
+    borderRadius: 2,
+  },
+  settingsTickBottom: {
+    position: "absolute",
+    bottom: 0,
+    width: 3,
+    height: 5,
+    borderRadius: 2,
+  },
+  settingsTickLeft: {
+    position: "absolute",
+    left: 0,
+    width: 5,
+    height: 3,
+    borderRadius: 2,
   },
 });

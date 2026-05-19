@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSettings } from "../context/SettingsContext";
 import { deletePlayer } from "../services/playerService";
 
 function formatDate(value) {
@@ -51,6 +52,7 @@ function buildPlayerShareMessage(player) {
 }
 
 export default function PlayerDetailScreen({ route, navigation }) {
+  const { textStyles } = useSettings();
   const { player } = route.params;
   const alternativePositions = Array.isArray(player.alternativePositions)
     ? player.alternativePositions
@@ -103,7 +105,7 @@ export default function PlayerDetailScreen({ route, navigation }) {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.name}>
+            <Text style={[styles.name, textStyles.title]}>
               {player.firstName} {player.lastName}
             </Text>
 
@@ -112,33 +114,39 @@ export default function PlayerDetailScreen({ route, navigation }) {
             </TouchableOpacity>
           </View>
 
-          <Text>Age: {player.age || "N/A"}</Text>
-          <Text>Team: {player.team?.name || player.teamName || "No team"}</Text>
-          <Text>
+          <Text style={textStyles.body}>Age: {player.age || "N/A"}</Text>
+          <Text style={textStyles.body}>
+            Team: {player.team?.name || player.teamName || "No team"}
+          </Text>
+          <Text style={textStyles.body}>
             Kit Number:{" "}
             {player.jerseyNumber !== undefined && player.jerseyNumber !== null
               ? player.jerseyNumber
               : "N/A"}
           </Text>
 
-          <Text style={styles.section}>Preferred Position:</Text>
-          <Text>{player.preferredPosition || "N/A"}</Text>
+          <Text style={[styles.section, textStyles.body]}>
+            Preferred Position:
+          </Text>
+          <Text style={textStyles.body}>{player.preferredPosition || "N/A"}</Text>
 
-          <Text style={styles.section}>Alternative Positions:</Text>
-          <Text>
+          <Text style={[styles.section, textStyles.body]}>
+            Alternative Positions:
+          </Text>
+          <Text style={textStyles.body}>
             {alternativePositions.length > 0
               ? alternativePositions.join(", ")
               : "N/A"}
           </Text>
 
-          <Text style={styles.section}>Guardian:</Text>
-          <Text>{player.guardianName || "N/A"}</Text>
-          <Text>{player.guardianPhone || "N/A"}</Text>
-          <Text>{player.email || "N/A"}</Text>
+          <Text style={[styles.section, textStyles.body]}>Guardian:</Text>
+          <Text style={textStyles.body}>{player.guardianName || "N/A"}</Text>
+          <Text style={textStyles.body}>{player.guardianPhone || "N/A"}</Text>
+          <Text style={textStyles.body}>{player.email || "N/A"}</Text>
 
-          <Text style={styles.section}>Player Contact:</Text>
-          <Text>{player.playerPhone || "N/A"}</Text>
-          <Text>{player.playerEmail || "N/A"}</Text>
+          <Text style={[styles.section, textStyles.body]}>Player Contact:</Text>
+          <Text style={textStyles.body}>{player.playerPhone || "N/A"}</Text>
+          <Text style={textStyles.body}>{player.playerEmail || "N/A"}</Text>
 
           <View style={styles.buttonRow}>
             <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
