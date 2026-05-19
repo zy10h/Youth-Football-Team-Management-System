@@ -34,6 +34,11 @@ It provides a full-stack web solution that allows users to create, update, and m
 - Authentication (JWT-based login and registration)
 - Coach scheduling conflict prevention (cannot assign overlapping training days)
 
+### Mobile Features
+- Mobile-friendly navigation using bottom tabs and stack navigation
+- Gesture-based interactions using long press actions
+- Share functionality using the device share sheet
+- Responsive layouts designed for mobile devices
 ---
 
 ## 3. Technologies
@@ -47,6 +52,13 @@ It provides a full-stack web solution that allows users to create, update, and m
 ### Frontend
 - React (Vite)
 - Mantine UI
+
+### Mobile Application
+- React Native
+- Expo
+- React Navigation
+- Axios
+- Android Emulator / Expo Go
 
 ### Other
 - JWT Authentication
@@ -63,6 +75,7 @@ It provides a full-stack web solution that allows users to create, update, and m
 ├── Caddyfile
 ├── client/        # Frontend (React)
 ├── server/        # Backend (Express)
+├── app/           # Mobile application (React Native + Expo)
 └── README.md
 
 ```
@@ -77,7 +90,7 @@ npm run dev
 Server will run on:  
 http://localhost:3000  
 
-### Frontend Setup
+### Web Frontend Setup
 
 cd client  
 npm install  
@@ -85,6 +98,16 @@ npm run dev
 
 Frontend will run on:  
 http://localhost:5173  
+
+### Mobile Application Setup
+cd app
+npm install
+npx expo start
+
+The mobile app can be tested using:
+
+- Android Emulator
+- Expo Go on a physical device
 
 ---
 
@@ -145,6 +168,7 @@ and served as static files.
 - The system supports dynamic data creation  
 - No initial database data is required  
 - Data can be created via UI or API during runtime  
+- The mobile application communicates with the same REST API backend as the web application
 
 ---
 
