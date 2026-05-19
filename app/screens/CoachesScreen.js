@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { useSettings } from "../context/SettingsContext";
+import { getCacheMeta } from "../services/cacheService";
 import { deleteCoach, getCoaches } from "../services/coachService";
 import { getTeams } from "../services/teamService";
 
@@ -31,6 +32,7 @@ export default function CoachesScreen({ navigation }) {
   const [coaches, setCoaches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [offlineMessage, setOfflineMessage] = useState("");
   const [searchText, setSearchText] = useState("");
 
   const loadCoaches = async () => {
@@ -68,8 +70,14 @@ export default function CoachesScreen({ navigation }) {
       });
 
       setCoaches(coachesWithTeams);
+      setOfflineMessage(
+        getCacheMeta(coachData).fromCache || getCacheMeta(teamData).fromCache
+          ? "Showing saved coach data. API is offline."
+          : ""
+      );
     } catch (err) {
       console.log("LOAD COACHES ERROR:", err.response?.data || err.message);
+      setOfflineMessage("");
       setError("Failed to load coaches.");
     } finally {
       setLoading(false);
@@ -208,6 +216,12 @@ export default function CoachesScreen({ navigation }) {
               {filteredCoaches.length === 1 ? "" : "es"} shown. Tap a coach to
               view details. Long press for quick actions.
             </Text>
+
+            {offlineMessage ? (
+              <Text style={[styles.offlineNotice, textStyles.small]}>
+                {offlineMessage}
+              </Text>
+            ) : null}
           </View>
         }
         renderItem={({ item }) => (
@@ -269,6 +283,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: "#666",
     fontSize: 13,
+  },
+  offlineNotice: {
+    color: "#7a4f00",
+    backgroundColor: "#fff4cc",
+    borderWidth: 1,
+    borderColor: "#f2d27a",
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 10,
   },
   card: {
     padding: 14,

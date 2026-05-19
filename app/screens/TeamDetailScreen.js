@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { useSettings } from "../context/SettingsContext";
+import { getCacheMeta } from "../services/cacheService";
 import { deleteTeam, getTeam } from "../services/teamService";
 
 const positionOrder = {
@@ -53,6 +54,7 @@ export default function TeamDetailScreen({ navigation, route }) {
   const [team, setTeam] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [offlineMessage, setOfflineMessage] = useState("");
   const [sort, setSort] = useState("position_asc");
   const [showSortOptions, setShowSortOptions] = useState(false);
   const [page, setPage] = useState(1);
@@ -65,8 +67,14 @@ export default function TeamDetailScreen({ navigation, route }) {
 
       const data = await getTeam(teamId);
       setTeam(data);
+      setOfflineMessage(
+        getCacheMeta(data).fromCache
+          ? "Showing saved team details. API is offline."
+          : ""
+      );
     } catch (err) {
       console.log("LOAD TEAM ERROR:", err.response?.data || err.message);
+      setOfflineMessage("");
       setError(err.response?.data?.message || "Failed to load team.");
     } finally {
       setLoading(false);
@@ -258,6 +266,12 @@ export default function TeamDetailScreen({ navigation, route }) {
             </View>
 
             <Text style={[styles.playersTitle, textStyles.title]}>Players</Text>
+
+            {offlineMessage ? (
+              <Text style={[styles.offlineNotice, textStyles.small]}>
+                {offlineMessage}
+              </Text>
+            ) : null}
 
             <TouchableOpacity
               style={styles.sortButton}
@@ -560,6 +574,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: "#666",
     fontSize: 13,
+  },
+  offlineNotice: {
+    color: "#7a4f00",
+    backgroundColor: "#fff4cc",
+    borderWidth: 1,
+    borderColor: "#f2d27a",
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 10,
   },
   playerCard: {
     padding: 14,

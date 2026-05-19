@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { useSettings } from "../context/SettingsContext";
+import { getCacheMeta } from "../services/cacheService";
 import { deleteTeam, getTeams } from "../services/teamService";
 
 const getCoachName = (coach) =>
@@ -22,6 +23,7 @@ export default function TeamsScreen({ navigation }) {
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [offlineMessage, setOfflineMessage] = useState("");
   const [searchText, setSearchText] = useState("");
   const [sort, setSort] = useState("name_asc");
 
@@ -32,8 +34,14 @@ export default function TeamsScreen({ navigation }) {
 
       const data = await getTeams();
       setTeams(data.teams || data);
+      setOfflineMessage(
+        getCacheMeta(data).fromCache
+          ? "Showing saved team data. API is offline."
+          : ""
+      );
     } catch (err) {
       console.log("LOAD TEAMS ERROR:", err.response?.data || err.message);
+      setOfflineMessage("");
       setError("Failed to load teams.");
     } finally {
       setLoading(false);
@@ -197,6 +205,12 @@ export default function TeamsScreen({ navigation }) {
               {filteredTeams.length === 1 ? "" : "s"} shown. Tap a team to view
               details. Long press for quick actions.
             </Text>
+
+            {offlineMessage ? (
+              <Text style={[styles.offlineNotice, textStyles.small]}>
+                {offlineMessage}
+              </Text>
+            ) : null}
           </View>
         }
         renderItem={({ item }) => (
@@ -286,6 +300,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: "#666",
     fontSize: 13,
+  },
+  offlineNotice: {
+    color: "#7a4f00",
+    backgroundColor: "#fff4cc",
+    borderWidth: 1,
+    borderColor: "#f2d27a",
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 10,
   },
   card: {
     padding: 14,

@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { useSettings } from "../context/SettingsContext";
+import { getCacheMeta } from "../services/cacheService";
 import { deleteCoach, getCoach } from "../services/coachService";
 import { getTeamsByCoach } from "../services/teamService";
 
@@ -51,6 +52,7 @@ export default function CoachDetailScreen({ navigation, route }) {
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [offlineMessage, setOfflineMessage] = useState("");
 
   const loadCoach = async () => {
     try {
@@ -64,8 +66,14 @@ export default function CoachDetailScreen({ navigation, route }) {
 
       setCoach(coachData);
       setTeams(teamData.teams || teamData);
+      setOfflineMessage(
+        getCacheMeta(coachData).fromCache || getCacheMeta(teamData).fromCache
+          ? "Showing saved coach details. API is offline."
+          : ""
+      );
     } catch (err) {
       console.log("LOAD COACH ERROR:", err.response?.data || err.message);
+      setOfflineMessage("");
       setError(err.response?.data?.message || "Failed to load coach.");
     } finally {
       setLoading(false);
@@ -155,6 +163,12 @@ export default function CoachDetailScreen({ navigation, route }) {
               <Text style={styles.shareButtonText}>SHARE</Text>
             </TouchableOpacity>
           </View>
+
+          {offlineMessage ? (
+            <Text style={[styles.offlineNotice, textStyles.small]}>
+              {offlineMessage}
+            </Text>
+          ) : null}
 
           <Text style={[styles.sectionTitle, textStyles.sectionTitle]}>
             Basic Info
@@ -265,6 +279,15 @@ const styles = StyleSheet.create({
   },
   infoText: {
     marginBottom: 8,
+  },
+  offlineNotice: {
+    color: "#7a4f00",
+    backgroundColor: "#fff4cc",
+    borderWidth: 1,
+    borderColor: "#f2d27a",
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 10,
   },
   muted: {
     color: "#666",

@@ -1,5 +1,6 @@
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Button,
   KeyboardAvoidingView,
@@ -15,6 +16,7 @@ import {
 
 import DatePickerField from "../components/DatePickerField";
 import { updatePlayer } from "../services/playerService";
+import { getTeam, getTeams } from "../services/teamService";
 
 const positionOptions = [
   "Goalkeeper",
@@ -27,10 +29,34 @@ const positionOptions = [
   "Striker",
 ];
 
+function calculateAge(dateOfBirth) {
+  if (!dateOfBirth) return null;
+
+  const birthDate = new Date(dateOfBirth);
+  if (Number.isNaN(birthDate.getTime())) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDifference = today.getMonth() - birthDate.getMonth();
+
+  if (
+    monthDifference < 0 ||
+    (monthDifference === 0 && today.getDate() < birthDate.getDate())
+  ) {
+    age--;
+  }
+
+  return age;
+}
+
 function getTeamId(team) {
   if (!team) return "";
   if (typeof team === "string") return team;
   return team._id || team.id || "";
+}
+
+function getPlayerId(player) {
+  return player?._id || player?.id || "";
 }
 
 function formatDateForInput(value) {
@@ -72,7 +98,8 @@ function DropdownSection({ title, value, isOpen, onToggle, children }) {
 export default function EditPlayerScreen({ route, navigation }) {
   const { player, returnRouteName = "PlayerDetail" } = route.params;
   const scrollViewRef = useRef(null);
-  const teamId = getTeamId(player.team);
+  const initialTeamId = getTeamId(player.team);
+  const playerId = getPlayerId(player);
 
   const [form, setForm] = useState({
     firstName: player.firstName || "",
@@ -82,6 +109,8 @@ export default function EditPlayerScreen({ route, navigation }) {
     alternativePositions: Array.isArray(player.alternativePositions)
       ? player.alternativePositions
       : [],
+    assignmentMode: initialTeamId ? "manual" : "auto",
+    team: initialTeamId,
     jerseyNumber:
       player.jerseyNumber !== undefined && player.jerseyNumber !== null
         ? String(player.jerseyNumber)
@@ -92,8 +121,141 @@ export default function EditPlayerScreen({ route, navigation }) {
     playerPhone: player.playerPhone || "",
     playerEmail: player.playerEmail || "",
   });
+  const [teams, setTeams] = useState([]);
+  const [teamPlayers, setTeamPlayers] = useState([]);
+  const [loadingTeams, setLoadingTeams] = useState(true);
+  const [teamError, setTeamError] = useState("");
   const [openDropdown, setOpenDropdown] = useState("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const loadTeams = async () => {
+      try {
+        setLoadingTeams(true);
+        setTeamError("");
+
+        const data = await getTeams();
+        setTeams(data.teams || data);
+      } catch (err) {
+        console.log("LOAD TEAMS ERROR:", err.response?.data || err.message);
+        setTeamError("Failed to load teams.");
+      } finally {
+        setLoadingTeams(false);
+      }
+    };
+
+    loadTeams();
+  }, []);
+
+  const age = useMemo(() => calculateAge(form.dateOfBirth), [form.dateOfBirth]);
+
+  const sortedTeams = useMemo(
+    () =>
+      teams
+        .slice()
+        .sort((a, b) => Number(a.maxAge || 999) - Number(b.maxAge || 999)),
+    [teams]
+  );
+
+  const recommendedTeam = useMemo(() => {
+    if (age === null) return null;
+
+    return (
+      sortedTeams.find((team) => age <= Number(team.maxAge || team.ageGroup)) ||
+      null
+    );
+  }, [age, sortedTeams]);
+
+  const selectedTeam = useMemo(
+    () =>
+      teams.find(
+        (team) => String(team._id || team.id) === String(form.team)
+      ) || null,
+    [form.team, teams]
+  );
+
+  const effectiveTeamId =
+    form.assignmentMode === "manual"
+      ? form.team
+      : getTeamId(recommendedTeam);
+
+  const effectiveTeam = useMemo(
+    () =>
+      teams.find(
+        (team) => String(team._id || team.id) === String(effectiveTeamId)
+      ) || null,
+    [effectiveTeamId, teams]
+  );
+
+  useEffect(() => {
+    if (!form.team || age === null) return;
+
+    const team = teams.find(
+      (item) => String(item._id || item.id) === String(form.team)
+    );
+
+    if (team && age > Number(team.maxAge || team.ageGroup)) {
+      setForm((current) => ({
+        ...current,
+        team: "",
+        jerseyNumber: "",
+      }));
+    }
+  }, [age, form.team, teams]);
+
+  useEffect(() => {
+    const loadTeamPlayers = async () => {
+      if (!effectiveTeamId) {
+        setTeamPlayers([]);
+        return;
+      }
+
+      try {
+        const data = await getTeam(effectiveTeamId);
+        setTeamPlayers(data.players || []);
+      } catch (err) {
+        console.log(
+          "LOAD TEAM PLAYERS ERROR:",
+          err.response?.data || err.message
+        );
+        setTeamPlayers([]);
+      }
+    };
+
+    loadTeamPlayers();
+  }, [effectiveTeamId]);
+
+  const takenJerseyNumbers = useMemo(
+    () =>
+      new Set(
+        teamPlayers
+          .filter(
+            (teamPlayer) => String(getPlayerId(teamPlayer)) !== String(playerId)
+          )
+          .map((teamPlayer) => Number(teamPlayer.jerseyNumber))
+          .filter((number) => !Number.isNaN(number))
+      ),
+    [playerId, teamPlayers]
+  );
+
+  const availableJerseyNumbers = useMemo(
+    () =>
+      Array.from({ length: 99 }, (_, index) => index + 1).filter(
+        (number) => !takenJerseyNumbers.has(number)
+      ),
+    [takenJerseyNumbers]
+  );
+
+  useEffect(() => {
+    if (!form.jerseyNumber) return;
+
+    if (takenJerseyNumbers.has(Number(form.jerseyNumber))) {
+      setForm((current) => ({
+        ...current,
+        jerseyNumber: "",
+      }));
+    }
+  }, [form.jerseyNumber, takenJerseyNumbers]);
 
   const updateField = (field, value) => {
     setForm((current) => {
@@ -106,6 +268,15 @@ export default function EditPlayerScreen({ route, navigation }) {
         updated.alternativePositions = current.alternativePositions.filter(
           (position) => position !== value
         );
+      }
+
+      if (field === "assignmentMode") {
+        updated.team = value === "auto" ? "" : current.team;
+        updated.jerseyNumber = "";
+      }
+
+      if (field === "team" || field === "dateOfBirth") {
+        updated.jerseyNumber = "";
       }
 
       return updated;
@@ -134,8 +305,15 @@ export default function EditPlayerScreen({ route, navigation }) {
     });
   };
 
-  const sanitizeNumber = (value, maxLength) =>
-    value.replace(/[^0-9]/g, "").slice(0, maxLength);
+  const selectTeam = (teamId) => {
+    updateField("team", teamId);
+    setOpenDropdown("");
+  };
+
+  const selectJerseyNumber = (number) => {
+    updateField("jerseyNumber", String(number));
+    setOpenDropdown("");
+  };
 
   const scrollFocusedInputIntoView = (y) => {
     setTimeout(() => {
@@ -164,13 +342,37 @@ export default function EditPlayerScreen({ route, navigation }) {
       return;
     }
 
+    if (age === null) {
+      Alert.alert("Error", "Please enter a valid date of birth.");
+      return;
+    }
+
     if (!guardianPhone && !email) {
       Alert.alert("Error", "Guardian phone or email is required.");
       return;
     }
 
+    if (form.assignmentMode === "manual" && !form.team) {
+      Alert.alert("Error", "Please select a team for manual assignment.");
+      return;
+    }
+
+    if (
+      form.assignmentMode === "manual" &&
+      selectedTeam &&
+      age > Number(selectedTeam.maxAge || selectedTeam.ageGroup)
+    ) {
+      Alert.alert("Error", "Player is too old for the selected team.");
+      return;
+    }
+
     if (jerseyNumber && (Number(jerseyNumber) < 1 || Number(jerseyNumber) > 99)) {
       Alert.alert("Error", "Kit number must be between 1 and 99.");
+      return;
+    }
+
+    if (jerseyNumber && takenJerseyNumbers.has(Number(jerseyNumber))) {
+      Alert.alert("Error", "The selected kit number is already taken.");
       return;
     }
 
@@ -191,8 +393,8 @@ export default function EditPlayerScreen({ route, navigation }) {
         email,
         playerPhone,
         playerEmail,
-        assignmentMode: teamId ? "manual" : "auto",
-        team: teamId || undefined,
+        assignmentMode: form.assignmentMode,
+        team: effectiveTeamId || undefined,
       };
 
       const updatedPlayer = await updatePlayer(player._id || player.id, payload);
@@ -216,6 +418,33 @@ export default function EditPlayerScreen({ route, navigation }) {
     }
   };
 
+  const recommendedTeamText = recommendedTeam
+    ? recommendedTeam.name
+    : "No suitable team found";
+  const selectedTeamText = selectedTeam
+    ? selectedTeam.name
+    : "Select a team";
+  const jerseyText = form.jerseyNumber
+    ? String(form.jerseyNumber)
+    : effectiveTeam
+    ? "Select a kit number"
+    : "Select a team first";
+  const manualOverrideWarning =
+    form.assignmentMode === "manual" &&
+    selectedTeam &&
+    recommendedTeam &&
+    String(selectedTeam._id || selectedTeam.id) !==
+      String(recommendedTeam._id || recommendedTeam.id);
+
+  if (loadingTeams) {
+    return (
+      <SafeAreaView style={styles.center}>
+        <ActivityIndicator size="large" />
+        <Text>Loading player form...</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -230,6 +459,8 @@ export default function EditPlayerScreen({ route, navigation }) {
         >
           <Text style={styles.title}>Edit Player</Text>
           <Text style={styles.subtitle}>Update player information</Text>
+
+          {teamError ? <Text style={styles.error}>{teamError}</Text> : null}
 
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Player Details</Text>
@@ -254,6 +485,10 @@ export default function EditPlayerScreen({ route, navigation }) {
               onChange={(value) => updateField("dateOfBirth", value)}
               onOpen={() => scrollFocusedInputIntoView(80)}
             />
+
+            <Text style={styles.readOnlyValue}>
+              Calculated Age: {age === null ? "N/A" : age}
+            </Text>
 
             <DropdownSection
               title="Preferred Position"
@@ -350,17 +585,155 @@ export default function EditPlayerScreen({ route, navigation }) {
               </View>
             </DropdownSection>
 
-            <Text style={styles.label}>Kit Number</Text>
-            <TextInput
-              style={styles.input}
-              value={form.jerseyNumber}
-              onChangeText={(value) =>
-                updateField("jerseyNumber", sanitizeNumber(value, 2))
-              }
-              keyboardType="numeric"
-              onFocus={() => scrollFocusedInputIntoView(360)}
-              placeholder="1-99"
-            />
+            <Text style={styles.sectionLabel}>Team Assignment</Text>
+
+            <Text style={styles.label}>Assignment Mode</Text>
+            <View style={styles.segmented}>
+              <TouchableOpacity
+                style={[
+                  styles.segmentButton,
+                  form.assignmentMode === "auto" && styles.segmentButtonActive,
+                ]}
+                onPress={() => updateField("assignmentMode", "auto")}
+              >
+                <Text
+                  style={[
+                    styles.segmentButtonText,
+                    form.assignmentMode === "auto" &&
+                      styles.segmentButtonTextActive,
+                  ]}
+                >
+                  Auto
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.segmentButton,
+                  form.assignmentMode === "manual" &&
+                    styles.segmentButtonActive,
+                ]}
+                onPress={() => updateField("assignmentMode", "manual")}
+              >
+                <Text
+                  style={[
+                    styles.segmentButtonText,
+                    form.assignmentMode === "manual" &&
+                      styles.segmentButtonTextActive,
+                  ]}
+                >
+                  Manual
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {form.assignmentMode === "auto" && (
+              <Text style={styles.helperText}>
+                Recommended Team: {recommendedTeamText}
+              </Text>
+            )}
+
+            {form.assignmentMode === "manual" && (
+              <>
+                <DropdownSection
+                  title="Team"
+                  value={selectedTeamText}
+                  isOpen={openDropdown === "team"}
+                  onToggle={() => toggleDropdown("team")}
+                >
+                  {sortedTeams.map((team) => {
+                    const teamId = team._id || team.id;
+                    const isTooOld =
+                      age !== null &&
+                      age > Number(team.maxAge || team.ageGroup);
+                    const isSelected = String(form.team) === String(teamId);
+
+                    return (
+                      <TouchableOpacity
+                        key={teamId}
+                        style={[
+                          styles.optionRow,
+                          isTooOld && styles.optionRowDisabled,
+                        ]}
+                        disabled={isTooOld}
+                        onPress={() => selectTeam(teamId)}
+                      >
+                        <Text
+                          style={[
+                            styles.optionText,
+                            isSelected && styles.optionTextSelected,
+                            isTooOld && styles.optionTextDisabled,
+                          ]}
+                        >
+                          {team.name} (U{team.maxAge})
+                          {isTooOld ? " - unavailable" : ""}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </DropdownSection>
+
+                {selectedTeam && (
+                  <Text
+                    style={[
+                      styles.helperText,
+                      manualOverrideWarning && styles.warningText,
+                    ]}
+                  >
+                    Selected Team: {selectedTeam.name}
+                    {recommendedTeam
+                      ? ` | Recommended: ${recommendedTeam.name}`
+                      : ""}
+                  </Text>
+                )}
+              </>
+            )}
+
+            {effectiveTeam ? (
+              <>
+                <DropdownSection
+                  title="Kit Number"
+                  value={jerseyText}
+                  isOpen={openDropdown === "jersey"}
+                  onToggle={() => toggleDropdown("jersey")}
+                >
+                  <View style={styles.jerseyGrid}>
+                    {availableJerseyNumbers.map((number) => {
+                      const isSelected =
+                        String(form.jerseyNumber) === String(number);
+
+                      return (
+                        <TouchableOpacity
+                          key={number}
+                          style={[
+                            styles.jerseyButton,
+                            isSelected && styles.jerseyButtonSelected,
+                          ]}
+                          onPress={() => selectJerseyNumber(number)}
+                        >
+                          <Text
+                            style={[
+                              styles.jerseyButtonText,
+                              isSelected && styles.jerseyButtonTextSelected,
+                            ]}
+                          >
+                            {number}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </DropdownSection>
+
+                <Text style={styles.helperText}>
+                  Available kit numbers are based on team {effectiveTeam.name}.
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.helperText}>
+                Select a suitable team before choosing a kit number.
+              </Text>
+            )}
 
             <Text style={styles.sectionLabel}>Guardian Contact</Text>
 
@@ -433,6 +806,12 @@ const styles = StyleSheet.create({
   keyboardAvoider: {
     flex: 1,
   },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
   content: {
     padding: 12,
     paddingBottom: 300,
@@ -477,6 +856,26 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     backgroundColor: "#fff",
   },
+  readOnlyValue: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 6,
+    color: "#666",
+    padding: 12,
+    marginBottom: 14,
+    backgroundColor: "#f7f7f7",
+  },
+  error: {
+    color: "red",
+    marginBottom: 10,
+  },
+  helperText: {
+    color: "#666",
+    marginBottom: 12,
+  },
+  warningText: {
+    color: "#b26a00",
+  },
   dropdown: {
     marginBottom: 14,
   },
@@ -520,6 +919,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
+  optionRowDisabled: {
+    backgroundColor: "#f3f3f3",
+  },
   optionText: {
     color: "#333",
     fontSize: 15,
@@ -527,6 +929,9 @@ const styles = StyleSheet.create({
   optionTextSelected: {
     color: "#0d6ecf",
     fontWeight: "bold",
+  },
+  optionTextDisabled: {
+    color: "#999",
   },
   checkbox: {
     width: 18,
@@ -556,6 +961,57 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontWeight: "bold",
+  },
+  segmented: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 12,
+  },
+  segmentButton: {
+    flex: 1,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#cfd8dc",
+    borderRadius: 6,
+    paddingVertical: 10,
+  },
+  segmentButtonActive: {
+    borderColor: "#2196f3",
+    backgroundColor: "#2196f3",
+  },
+  segmentButtonText: {
+    color: "#333",
+    fontWeight: "bold",
+  },
+  segmentButtonTextActive: {
+    color: "#fff",
+  },
+  jerseyGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    padding: 10,
+  },
+  jerseyButton: {
+    minWidth: 42,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#cfd8dc",
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    backgroundColor: "#fff",
+  },
+  jerseyButtonSelected: {
+    borderColor: "#2196f3",
+    backgroundColor: "#2196f3",
+  },
+  jerseyButtonText: {
+    color: "#333",
+    fontWeight: "bold",
+  },
+  jerseyButtonTextSelected: {
+    color: "#fff",
   },
   buttonArea: {
     marginTop: 14,

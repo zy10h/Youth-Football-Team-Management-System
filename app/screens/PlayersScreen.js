@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { useSettings } from "../context/SettingsContext";
+import { getCacheMeta } from "../services/cacheService";
 import { getPlayers, deletePlayer } from "../services/playerService";
 
 const positionOptions = [
@@ -87,6 +88,7 @@ export default function PlayersScreen({ navigation }) {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [offlineMessage, setOfflineMessage] = useState("");
   const [searchText, setSearchText] = useState("");
   const [preferredPositionFilter, setPreferredPositionFilter] = useState("");
   const [alternativePositionFilters, setAlternativePositionFilters] = useState(
@@ -109,12 +111,16 @@ export default function PlayersScreen({ navigation }) {
         page: 1,
         limit: PLAYER_FETCH_LIMIT,
       });
+      let usingCache = getCacheMeta(firstPage).fromCache;
       const firstPlayers = firstPage.players || firstPage;
       const totalPlayers = Number(firstPage.total) || firstPlayers.length;
       const totalApiPages = Math.ceil(totalPlayers / PLAYER_FETCH_LIMIT);
 
       if (!firstPage.players || totalApiPages <= 1) {
         setPlayers(firstPlayers);
+        setOfflineMessage(
+          usingCache ? "Showing saved player data. API is offline." : ""
+        );
         return;
       }
 
@@ -131,8 +137,15 @@ export default function PlayersScreen({ navigation }) {
         ...firstPlayers,
         ...remainingPages.flatMap((pageData) => pageData.players || pageData),
       ]);
+      usingCache =
+        usingCache ||
+        remainingPages.some((pageData) => getCacheMeta(pageData).fromCache);
+      setOfflineMessage(
+        usingCache ? "Showing saved player data. API is offline." : ""
+      );
     } catch (err) {
       console.log("LOAD PLAYERS ERROR:", err.response?.data || err.message);
+      setOfflineMessage("");
       setError("Failed to load players.");
     } finally {
       setLoading(false);
@@ -666,6 +679,12 @@ export default function PlayersScreen({ navigation }) {
               Showing {firstShown}-{lastShown} of {filteredPlayers.length}{" "}
               players. Tap to view details. Long press for quick actions.
             </Text>
+
+            {offlineMessage ? (
+              <Text style={[styles.offlineNotice, textStyles.small]}>
+                {offlineMessage}
+              </Text>
+            ) : null}
           </View>
         }
         renderItem={({ item }) => (
@@ -961,6 +980,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: "#666",
     fontSize: 13,
+  },
+  offlineNotice: {
+    color: "#7a4f00",
+    backgroundColor: "#fff4cc",
+    borderWidth: 1,
+    borderColor: "#f2d27a",
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 10,
   },
   card: {
     padding: 14,

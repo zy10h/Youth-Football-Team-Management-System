@@ -1,8 +1,17 @@
 import api from "./api";
+import { withOfflineCache } from "./cacheService";
+
+const PLAYERS_CACHE_KEY = "offline.players";
+
+function getPlayersCacheKey(params) {
+  return `${PLAYERS_CACHE_KEY}.${JSON.stringify(params || {})}`;
+}
 
 export async function getPlayers(params = {}) {
-  const response = await api.get("/players", { params });
-  return response.data;
+  return withOfflineCache(getPlayersCacheKey(params), async () => {
+    const response = await api.get("/players", { params });
+    return response.data;
+  });
 }
 
 export async function createPlayer(playerData) {
