@@ -13,6 +13,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Lightweight liveness probe for Docker and load balancers.
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', service: 'youth-football-api' });
+});
+
+// Readiness probe: only ready if MongoDB is connected.
+app.get('/ready', (req, res) => {
+  const ready = mongoose.connection.readyState === 1;
+  res.status(ready ? 200 : 503).json({ status: ready ? 'ready' : 'not_ready' });
+});
+
 app.use('/api', routes);
 
 app.get('/', (req, res) => {
@@ -24,6 +35,13 @@ app.use(errorMiddleware);
 
 const PORT = process.env.PORT || 3000;
 
+for (const key of ['MONGODB_URI', 'JWT_SECRET']) {
+  if (!process.env[key]) {
+    console.error(`Missing required environment variable: ${key}`);
+    process.exit(1);
+  }
+}
+
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => {
@@ -34,4 +52,5 @@ mongoose
   })
   .catch((error) => {
     console.error('Database connection failed:', error.message);
+    process.exit(1);
   });
