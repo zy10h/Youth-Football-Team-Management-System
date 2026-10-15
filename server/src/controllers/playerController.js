@@ -332,10 +332,203 @@ async function deletePlayer(req, res, next) {
   }
 }
 
+// POST /api/players/bulk
+async function bulkCreatePlayers(req, res, next) {
+  try {
+    const { players } = req.body;
+
+    // Check the number of players.
+    if (!Array.isArray(players) || players.length === 0) {
+      return res.status(400).json({
+        message: 'Please provide a non-empty players array.'
+      });
+    }
+
+    if (players.length > 100) {
+      return res.status(400).json({
+        message: 'A maximum of 100 players can be imported at once.'
+      });
+    }
+
+    // Read teams once, instead of querying MongoDB for every player.
+    const teams = await Team.find().sort({ maxAge: 1 }).lean();
+
+    const results = [];
+    let imported = 0;
+    let failed = 0;
+
+    const teamAssignments = {};
+
+    for (let index = 0; index < players.length; index++) {
+      const input = players[index];
+
+      try {
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw new Error('Invalid player data.');
+        }
+
+        const firstName =
+          typeof input.firstName === 'string'
+            ? input.firstName.trim()
+            : '';
+
+        const lastName =
+          typeof input.lastName === 'string'
+            ? input.lastName.trim()
+            : '';
+
+        const guardianName =
+          typeof input.guardianName === 'string'
+            ? input.guardianName.trim()
+            : '';
+
+        const guardianPhone =
+          typeof input.guardianPhone === 'string'
+            ? input.guardianPhone.trim()
+            : '';
+
+        const email =
+          typeof input.email === 'string'
+            ? input.email.trim()
+            : '';
+
+        const preferredPosition =
+          typeof input.preferredPosition === 'string'
+            ? input.preferredPosition.trim()
+            : '';
+
+        const dateOfBirth = input.dateOfBirth;
+
+        // Required fields.
+        if (!firstName || !lastName) {
+          throw new Error('First name and last name are required.');
+        }
+
+        if (!guardianName) {
+          throw new Error('Guardian name is required.');
+        }
+
+        if (!guardianPhone && !email) {
+          throw new Error(
+            'At least one guardian contact method is required.'
+          );
+        }
+
+        // Require YYYY-MM-DD to avoid ambiguous date formats.
+        if (
+          typeof dateOfBirth !== 'string' ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)
+        ) {
+          throw new Error('Date of birth must use YYYY-MM-DD format.');
+        }
+
+        const birthDate = new Date(`${dateOfBirth}T00:00:00.000Z`);
+
+        if (
+          Number.isNaN(birthDate.getTime()) ||
+          birthDate.toISOString().slice(0, 10) !== dateOfBirth
+        ) {
+          throw new Error('Invalid date of birth.');
+        }
+
+        const now = new Date();
+
+        if (birthDate > now) {
+          throw new Error('Date of birth cannot be in the future.');
+        }
+
+        // Calculate age.
+        let age =
+          now.getUTCFullYear() - birthDate.getUTCFullYear();
+
+        const birthdayPassed =
+          now.getUTCMonth() > birthDate.getUTCMonth() ||
+          (
+            now.getUTCMonth() === birthDate.getUTCMonth() &&
+            now.getUTCDate() >= birthDate.getUTCDate()
+          );
+
+        if (!birthdayPassed) {
+          age--;
+        }
+
+        // Find the youngest suitable team.
+        const assignedTeam = teams.find(
+          team => team.maxAge >= age
+        );
+
+        // Create one player at a time so validation errors
+        // can be reported for individual rows.
+        const player = await Player.create({
+          firstName,
+          lastName,
+          dateOfBirth: birthDate,
+          age,
+          preferredPosition,
+          guardianName,
+          guardianPhone,
+          email,
+          team: assignedTeam ? assignedTeam._id : null,
+          createdBy: req.user.id
+        });
+
+        imported++;
+
+        const teamName = assignedTeam
+          ? assignedTeam.name
+          : 'Unassigned';
+
+        teamAssignments[teamName] =
+          (teamAssignments[teamName] || 0) + 1;
+
+        results.push({
+          row: index + 1,
+          status: 'SUCCESS',
+          playerId: player._id,
+          name: `${firstName} ${lastName}`,
+          age,
+          team: teamName
+        });
+
+      } catch (error) {
+        failed++;
+
+        results.push({
+          row: index + 1,
+          status: 'FAILED',
+          name:
+            typeof input?.firstName === 'string' &&
+            typeof input?.lastName === 'string'
+              ? `${input.firstName} ${input.lastName}`
+              : 'Unknown',
+          error: error.message
+        });
+      }
+    }
+
+    console.log(
+      `Bulk import completed: ${imported} imported, ${failed} failed`
+    );
+
+    return res.status(200).json({
+      message: 'Bulk import completed.',
+      total: players.length,
+      imported,
+      failed,
+      teamAssignments,
+      results
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   getAllPlayers,
   getPlayerById,
   createPlayer,
   updatePlayer,
-  deletePlayer
+  deletePlayer,
+  bulkCreatePlayers
 };

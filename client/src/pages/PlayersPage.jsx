@@ -16,6 +16,7 @@ import {
   NumberInput,
 } from "@mantine/core";
 import api from "../api/api";
+import BulkImportPlayersModal from "../components/BulkImportPlayersModal";
 import LoadingState from "../components/LoadingState";
 import ErrorAlert from "../components/ErrorAlert";
 import LinkText from "../components/LinkText";
@@ -33,6 +34,8 @@ const positionOptions = [
 
 export default function PlayersPage() {
   const [players, setPlayers] = useState([]);
+  const [importOpened, setImportOpened] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("name_asc");
   const [page, setPage] = useState(1);
@@ -86,7 +89,7 @@ export default function PlayersPage() {
     };
 
     fetchPlayers();
-  }, [search]);
+  }, [search, reloadKey]);
 
   useEffect(() => {
     if (minAge !== "" && maxAge !== "" && Number(minAge) > Number(maxAge)) {
@@ -270,11 +273,24 @@ export default function PlayersPage() {
             View and manage academy players
           </Text>
         </div>
+        <Group gap="sm">
+          <Button
+              variant="light"
+              onClick={() => setImportOpened(true)}
+            >
+              Import Players
+            </Button>
 
-        <Button component={Link} to="/players/new">
-          Add Player
-        </Button>
+            <Button component={Link} to="/players/new">
+              Add Player
+            </Button>
+          </Group>
       </Group>
+      <BulkImportPlayersModal
+        opened={importOpened}
+          onClose={() => setImportOpened(false)}
+          onImported={() => setReloadKey((value) => value + 1)}
+        />
 
       <ErrorAlert message={error} />
 

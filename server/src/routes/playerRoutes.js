@@ -6,13 +6,15 @@ const {
   getPlayerById,
   createPlayer,
   updatePlayer,
-  deletePlayer
+  deletePlayer,
+  bulkCreatePlayers
 } = require('../controllers/playerController');
 
 const authMiddleware = require('../middleware/authMiddleware');
 const validateMiddleware = require('../middleware/validateMiddleware');
 
 const router = express.Router();
+router.use(authMiddleware);
 
 const jerseyValidation = body('jerseyNumber')
   .optional()
@@ -20,6 +22,8 @@ const jerseyValidation = body('jerseyNumber')
   .withMessage('Jersey number must be between 1 and 99');
 
 router.get('/', getAllPlayers);
+// Bulk import players
+router.post('/bulk', bulkCreatePlayers);
 router.get('/:id', getPlayerById);
 
 router.post(

@@ -14,6 +14,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const validateMiddleware = require('../middleware/validateMiddleware');
 
 const router = express.Router();
+router.use(authMiddleware);
 
 const validTrainingDays = [
   'Monday',

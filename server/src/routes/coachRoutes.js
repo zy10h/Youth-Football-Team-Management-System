@@ -13,6 +13,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const validateMiddleware = require('../middleware/validateMiddleware');
 
 const router = express.Router();
+router.use(authMiddleware);
 
 const coachValidation = [
   body('firstName')
